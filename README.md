@@ -1,74 +1,64 @@
-# 🌽 Mazu Framework
+# 📅 Google Calendar Integration Project
 
-**Mazu Framework** adalah sebuah framework PHP personal yang dikembangkan oleh **Mahfudz Masyhur**. Framework ini dirancang dengan pendekatan modern, mendukung _hybrid rendering_ untuk pengalaman SPA (Single Page Application), serta memiliki sistem CLI yang kuat untuk mempermudah pengembangan.
+Proyek ini adalah implementasi integrasi Google Calendar API menggunakan **Domain-Wide Delegation** untuk melakukan impersonasi user dan memasukkan agenda (event) secara otomatis ke kalender user. Proyek ini dibangun di atas **Mazu Framework**.
 
 ## 🚀 Fitur Utama
 
-- **Hybrid SPA Engine**: Navigasi antar halaman yang cepat tanpa reload penuh menggunakan Mazu SPA Router.
-- **Mazu CLI**: Tool command-line (`php mazu`) untuk otomatisasi berbagai tugas pengembangan.
-- **Queue System**: Mendukung background job menggunakan Redis.
-- **Flexible Routing**: Sistem routing yang mendukung middleware dan caching.
-- **Environment Driven**: Konfigurasi berbasis file `.env` yang aman.
-- **Built-in Dev Server**: Server lokal siap pakai untuk pengembangan cepat.
+- **Google Calendar Impersonation**: Memungkinkan aplikasi (Service Account) untuk bertindak atas nama user dalam domain Google Workspace yang sama.
+- **Auto Broadcast Agenda**: Endpoint API untuk mengirimkan data agenda ke kalender user target secara otomatis.
+- **REST API Ready**: Dilengkapi dengan endpoint API yang siap dikonsumsi oleh aplikasi lain.
+- **Hybrid SPA Engine**: Navigasi antarmuka yang cepat menggunakan engine Mazu.
 
-## 🛠 Instalasi
+## 🛠 Prasyarat & Instalasi
 
-1. Clone repositori ini ke direktori lokal Anda.
-2. Pastikan Anda memiliki PHP 8.1+ dan Composer terinstal.
-3. Jalankan perintah untuk menginstal dependensi:
+1. **Google Cloud Console**:
+   - Buat Service Account.
+   - Aktifkan Google Calendar API.
+   - Aktifkan **Domain-Wide Delegation** pada Service Account tersebut.
+   - Unduh file kredensial JSON dan simpan sebagai `service-account-auth.json` di root direktori proyek.
+
+2. **Instalasi Proyek**:
    ```bash
    composer install
-   ```
-4. Salin file `.env.example` menjadi `.env` dan sesuaikan konfigurasinya:
-   ```bash
    cp .env.example .env
    ```
-5. Generate key atau sesuaikan konfigurasi database di dalam `.env`.
 
-## 💻 Penggunaan CLI
+3. **Konfigurasi .env**:
+   Sesuaikan `APP_URL` dan konfigurasi lainnya di file `.env`.
 
-Mazu dilengkapi dengan command-line interface yang disebut `mazu`. Gunakan perintah berikut untuk melihat daftar perintah yang tersedia:
+## 🔌 API Endpoints
+
+### 1. Broadcast Agenda
+- **URL**: `/api/broadcast-agenda`
+- **Method**: `GET` (Saat ini diimplementasikan via GET untuk testing, namun mengambil data dari input body)
+- **Payload (JSON)**:
+  ```json
+  {
+    "target_email": "user@yourdomain.com",
+    "title": "Rapat Koordinasi",
+    "description": "Deskripsi agenda",
+    "location": "Ruang Rapat A",
+    "start_time": "2026-02-15T09:00:00+07:00",
+    "end_time": "2026-02-15T10:00:00+07:00"
+  }
+  ```
+
+## 💻 Menjalankan Proyek
+
+Gunakan CLI Mazu untuk menjalankan server pengembangan:
 
 ```bash
-php mazu list
+php mazu serve
 ```
 
-### Perintah Populer:
+Akses aplikasi melalui `http://localhost:8000`.
 
-- **Menjalankan Server Lokal**:
-  ```bash
-  php mazu serve
-  ```
-- **Membuat Controller Baru**:
-  ```bash
-  php mazu make:controller NamaController
-  ```
-- **Menjalankan Migrasi Database**:
-  ```bash
-  php mazu migrate
-  ```
-- **Menjalankan Queue Worker**:
-  ```bash
-  php mazu queue:work
-  ```
-- **Membangun Aset (Build)**:
-  ```bash
-  php mazu build
-  ```
+## 🏗 Technical Stack (Mazu Framework)
 
-## 📁 Struktur Direktori
-
-- `app/`: Logika inti aplikasi (Controller, Model, Middleware, Services).
-- `addon/`: Tempat untuk modul atau ekstensi tambahan.
-- `public/`: Direktori publik (entry point `index.php` dan aset statis).
-- `config/`: File konfigurasi aplikasi.
-- `vendor/`: Dependensi composer.
-- `mazu`: Entry point untuk perintah CLI.
-
-## 🤝 Kontribusi
-
-Framework ini bersifat personal, namun jika Anda memiliki saran atau menemukan bug, silakan sampaikan kepada pengembang.
+Proyek ini menggunakan **Mazu Framework**, sebuah framework PHP personal dengan fitur:
+- **CLI Tool**: `php mazu` untuk helper pengembangan.
+- **Routing & Middleware**: Sistem routing yang fleksibel di `addon/Router/index.php`.
+- **Service Layer**: Logika bisnis Google Calendar berada di `addon/Service/GoogleCalendarService.php`.
 
 ---
-
-**Mazu Framework** - _Simplicity in Modern PHP Development_
+**Google Calendar Integration** - *Automating Schedule with Domain-Wide Delegation*
