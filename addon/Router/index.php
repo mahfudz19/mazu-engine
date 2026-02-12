@@ -4,3 +4,4 @@ use Addon\Controllers\ApiController;
 
 $router->get('/', [ApiController::class, 'index']);
 $router->get('/api/test', [ApiController::class, 'test']);
+$router->get('/api/broadcast-agenda', [ApiController::class, 'broadcastAgenda']);

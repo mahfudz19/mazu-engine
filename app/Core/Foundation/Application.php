@@ -99,7 +99,6 @@ class Application
     } catch (RenderableInterface $e) {
       $response = $e->render($this->container);
     } catch (\Throwable $e) {
-      if (env('APP_DEBUG') === 'true') dump($e);
 
       $code = 500;
       $message = 'Terjadi kesalahan internal pada server.';

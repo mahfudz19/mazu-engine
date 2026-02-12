@@ -54,7 +54,18 @@ if (!function_exists('env')) {
   function env($key, $default = null)
   {
     loadEnvironmentConfig();
-    return $_ENV[$key] ?? $_SERVER[$key] ?? $default;
+
+    // Check $_ENV first, then $_SERVER, then getenv()
+    if (isset($_ENV[$key])) {
+      return $_ENV[$key];
+    }
+
+    if (isset($_SERVER[$key])) {
+      return $_SERVER[$key];
+    }
+
+    $value = getenv($key);
+    return $value === false ? $default : $value;
   }
 }
 
@@ -474,23 +485,6 @@ if (!function_exists('dump')) {
         </script>";
       }
     }
-  }
-}
-
-if (!function_exists('dd')) {
-  function dd(...$vars)
-  {
-    $config = $GLOBALS['dump_config'] ?? [];
-
-    dump(...$vars);
-
-    if (PHP_SAPI !== 'cli' && !headers_sent()) {
-      $status = $config['dd_http_status_code'] ?? 500;
-      http_response_code($status);
-    }
-
-    $exitCode = $config['dd_exit_code'] ?? 1;
-    exit($exitCode);
   }
 }
 
