@@ -23,7 +23,7 @@ if (!function_exists('asset')) {
     $path = ltrim($path, '/');
 
     // Cek apakah ada di manifest
-    if (isset($manifest[$path])) {
+    if (isProduction() && isset($manifest[$path])) {
       return getBaseUrl('build/' . $manifest[$path]);
     }
 

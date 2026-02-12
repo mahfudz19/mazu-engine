@@ -10,8 +10,14 @@ $uri = urldecode(
 );
 
 // Jika file statis ada di folder public, biarkan PHP Built-in Server menyajikannya (return false)
+// KECUALI untuk 'build/assets/' agar selalu ditangani oleh AssetController (untuk hot-reload di dev)
 if ($uri !== '/' && file_exists(__DIR__ . '/public' . $uri)) {
-    return false;
+    // Jika request mengarah ke build/assets, jangan sajikan file statisnya (bypass ke index.php)
+    if (strpos($uri, '/build/assets/') !== false) {
+        // Lanjut ke require index.php
+    } else {
+        return false;
+    }
 }
 
 // Jika tidak ada, alihkan ke front controller (index.php)
