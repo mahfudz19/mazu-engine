@@ -187,10 +187,7 @@ class BuildCommand implements CommandInterface
     // Sort by size descending
     usort($assets, fn($a, $b) => $b['size'] <=> $a['size']);
 
-    // Ambil top 10 terbesar
-    $topAssets = array_slice($assets, 0, 10);
-
-    foreach ($topAssets as $asset) {
+    foreach ($assets as $asset) {
       $sizeFormatted = $this->formatBytes($asset['size']);
       $name = $asset['name'];
 
@@ -200,10 +197,6 @@ class BuildCommand implements CommandInterface
       if ($asset['size'] > 500 * 1024) $sizeColor = 'red';    // > 500KB
 
       $this->printLineWithDots($name, $sizeFormatted, $sizeColor);
-    }
-
-    if (count($assets) > 10) {
-      echo "     " . color("... and " . (count($assets) - 10) . " more files.", "dim") . "\n";
     }
   }
 
@@ -363,31 +356,152 @@ class BuildCommand implements CommandInterface
 
   private function minifyJs(string $path): void
   {
-    // 1. Coba gunakan esbuild untuk hasil minifikasi terbaik (satu baris, aman)
-    $rootDir = realpath(__DIR__ . '/../../../');
-    $command = "cd " . escapeshellarg($rootDir) . " && npx esbuild " . escapeshellarg($path) . " --minify --outfile=" . escapeshellarg($path) . " --allow-overwrite 2>&1";
+    $code = file_get_contents($path);
+    if ($code === false) return;
 
-    $returnVar = 0;
-    exec($command, $_, $returnVar);
+    $len = strlen($code);
+    $out = '';
+    $inSingle = false;
+    $inDouble = false;
+    $inBacktick = false;
+    $inRegex = false;
+    $escape = false;
 
-    if ($returnVar === 0) {
-      return;
-    }
+    for ($i = 0; $i < $len; $i++) {
+      $ch = $code[$i];
+      $next = $i + 1 < $len ? $code[$i + 1] : '';
 
-    // 2. Fallback: Naive PHP Minification (jika esbuild gagal)
-    $content = file_get_contents($path);
-    $content = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $content);
-    $lines = explode("\n", $content);
-    $newLines = [];
-    foreach ($lines as $line) {
-      $trim = trim($line);
-      if (empty($trim) || str_starts_with($trim, '//')) {
+      if (!$inSingle && !$inDouble && !$inBacktick && !$inRegex) {
+        if ($ch === '/' && $next === '*') {
+          $i += 2;
+          while ($i < $len - 1 && !($code[$i] === '*' && $code[$i + 1] === '/')) $i++;
+          $i++; // skip '/'
+          continue;
+        }
+        if ($ch === '/' && $next === '/') {
+          while ($i < $len && $code[$i] !== "\n") $i++;
+          continue;
+        }
+        if ($ch === '/') {
+          $prevNonWs = '';
+          for ($j = $i - 1; $j >= 0; $j--) {
+            if (!ctype_space($code[$j])) {
+              $prevNonWs = $code[$j];
+              break;
+            }
+          }
+          if ($prevNonWs === '' || preg_match('/[\(=:\\[,]|\!|\?|\&|\||\{/', $prevNonWs)) {
+            $inRegex = true;
+            $out .= $ch;
+            continue;
+          }
+        }
+      }
+
+      if ($inRegex) {
+        if ($ch === '\\') {
+          $out .= $ch;
+          $i++;
+          if ($i < $len) $out .= $code[$i];
+          continue;
+        }
+        $out .= $ch;
+        if ($ch === '/') {
+          $inRegex = false;
+        }
         continue;
       }
-      $newLines[] = $trim;
+
+      if ($inSingle) {
+        $out .= $ch;
+        if ($escape) {
+          $escape = false;
+          continue;
+        }
+        if ($ch === '\\') {
+          $escape = true;
+          continue;
+        }
+        if ($ch === "'") {
+          $inSingle = false;
+        }
+        continue;
+      }
+      if ($inDouble) {
+        $out .= $ch;
+        if ($escape) {
+          $escape = false;
+          continue;
+        }
+        if ($ch === '\\') {
+          $escape = true;
+          continue;
+        }
+        if ($ch === '"') {
+          $inDouble = false;
+        }
+        continue;
+      }
+      if ($inBacktick) {
+        $out .= $ch;
+        if ($escape) {
+          $escape = false;
+          continue;
+        }
+        if ($ch === '\\') {
+          $escape = true;
+          continue;
+        }
+        if ($ch === '`') {
+          $inBacktick = false;
+        }
+        continue;
+      }
+
+      if ($ch === "'") {
+        $inSingle = true;
+        $out .= $ch;
+        continue;
+      }
+      if ($ch === '"') {
+        $inDouble = true;
+        $out .= $ch;
+        continue;
+      }
+      if ($ch === '`') {
+        $inBacktick = true;
+        $out .= $ch;
+        continue;
+      }
+
+      if (ctype_space($ch)) {
+        $outLen = strlen($out);
+        $prev = $outLen ? $out[$outLen - 1] : '';
+        $punct = "{}[]():;,.+-*/%&|^!~=<>?";
+        if ($prev === '' || str_contains($punct, $prev)) {
+          continue;
+        }
+        if ($next !== '' && str_contains($punct, $next)) {
+          continue;
+        }
+        $out .= ' ';
+        continue;
+      }
+
+      $punct = "{}[]():;,.+-*/%&|^!~=<>?";
+      if (str_contains($punct, $ch)) {
+        $out = rtrim($out);
+        $out .= $ch;
+        $k = $i + 1;
+        while ($k < $len && ctype_space($code[$k])) $k++;
+        $i = $k - 1;
+        continue;
+      }
+
+      $out .= $ch;
     }
-    $content = implode("\n", $newLines);
-    file_put_contents($path, $content);
+
+    file_put_contents($path, $out);
   }
 
   private function publishCoreAssets(): int

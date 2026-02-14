@@ -12,6 +12,10 @@ use App\Core\View\PageMeta;
 // Impor Interface dan Exception
 use App\Core\Interfaces\RenderableInterface;
 use App\Exceptions\HttpException;
+use App\Exceptions\AuthenticationException;
+use App\Exceptions\AuthorizationException;
+use App\Core\Http\JsonResponse;
+use App\Core\Http\RedirectResponse;
 
 class Application
 {
@@ -95,6 +99,54 @@ class Application
         $response = new Response($this->container, $html, $e->getStatusCode());
       } catch (\Throwable $renderError) {
         $response = $this->renderFallbackError(500, 'Terjadi kesalahan kritis saat menampilkan halaman error.', $renderError);
+      }
+    } catch (AuthenticationException $e) {
+      $wantsJson = $this->request->wantsJson() || str_starts_with($this->request->getPath(), '/api');
+      if ($wantsJson) {
+        $response = new JsonResponse($this->container, [
+          'status' => 'error',
+          'message' => $e->getMessage() ?: 'Unauthenticated',
+          'code' => 401
+        ], 401);
+      } else {
+        $response = new RedirectResponse($this->container, 'login');
+      }
+    } catch (AuthorizationException $e) {
+      if ($e->getMessage() === 'RedirectIfAuthenticated') {
+        $response = new RedirectResponse($this->container, '');
+      } else {
+        $wantsJson = $this->request->wantsJson() || str_starts_with($this->request->getPath(), '/api');
+        if ($wantsJson) {
+          $response = new JsonResponse($this->container, [
+            'status' => 'error',
+            'message' => $e->getMessage() ?: 'Forbidden',
+            'code' => 403
+          ], 403);
+        } else {
+          try {
+            /** @var \App\Services\ViewService $viewService */
+            $viewService = $this->container->resolve(\App\Services\ViewService::class);
+
+            $errorMeta = new PageMeta('Error 403');
+
+            $errorViewPath = 'error';
+            if (file_exists(__DIR__ . '/../../../addon/Views/error/index.php')) {
+              $errorViewPath = 'error/index';
+            }
+
+            $errorView = new View(
+              $this->container,
+              $errorViewPath,
+              ['code' => 403, 'message' => $e->getMessage() ?: 'Forbidden'],
+              $errorMeta
+            );
+
+            $html = $viewService->render($errorView);
+            $response = new Response($this->container, $html, 403);
+          } catch (\Throwable $renderError) {
+            $response = $this->renderFallbackError(403, 'Terjadi kesalahan kritis saat menampilkan halaman error.', $renderError);
+          }
+        }
       }
     } catch (RenderableInterface $e) {
       $response = $e->render($this->container);
