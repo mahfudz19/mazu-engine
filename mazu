@@ -8,11 +8,6 @@
 // 1. Load autoloader
 require_once __DIR__ . '/vendor/autoload.php';
 
-// 1.1 Load environment variables
-if (function_exists('loadEnvironmentConfig')) {
-  loadEnvironmentConfig();
-}
-
 // 2. Inisialisasi Engine Mazu
 $app = new App\Core\Foundation\Application();
 
