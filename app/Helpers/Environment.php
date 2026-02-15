@@ -8,8 +8,19 @@
 if (!function_exists('getEnvPath')) {
   function getEnvPath($envFile = '.env')
   {
+    // 1. Cek dari Environment Variable OS (misal diset di Apache/Nginx/Docker)
+    $osEnvPath = getenv('MAZU_ENV_PATH');
+    if ($osEnvPath !== false) {
+      return rtrim($osEnvPath, '/') . '/' . ltrim($envFile, '/');
+    }
+
+    // 2. Cek dari PHP Constant (bisa didefinisikan di index.php atau mazu CLI)
+    if (defined('MAZU_ENV_PATH')) {
+      return rtrim(constant('MAZU_ENV_PATH'), '/') . '/' . ltrim($envFile, '/');
+    }
+
+    // 3. Default: Root Project
     return __DIR__ . '/../../' . ltrim($envFile, '/');
-    // return __DIR__ . '/../../../.config/' . ltrim($envFile, '/');
   }
 }
 
