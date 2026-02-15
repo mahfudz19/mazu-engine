@@ -55,8 +55,19 @@ class BuildCommand implements CommandInterface
     $routeTime = number_format(microtime(true) - $routeStart, 2) . "s";
     $this->printLineWithDots(color("✔", "green") . " Route cache generated", $routeTime);
 
-    // 4. Publish Assets
-    echo "  4. ASSET MANAGEMENT\n";
+    // 4. Provider Cache
+    echo "  4. PROVIDER CACHE\n";
+    $provStart = microtime(true);
+    $provResult = $this->buildProviderCache();
+    $provTime = number_format(microtime(true) - $provStart, 2) . "s";
+    if ($provResult) {
+      $this->printLineWithDots(color("✔", "green") . " Provider cache generated", $provTime);
+    } else {
+      $this->printLineWithDots(color("!", "yellow") . " No addon providers found (skipped)", $provTime);
+    }
+
+    // 5. Publish Assets
+    echo "  5. ASSET MANAGEMENT\n";
     $pubStart = microtime(true);
     $coreCount = $this->publishCoreAssets();
     $addonCount = $this->publishAddonAssets();
@@ -64,8 +75,8 @@ class BuildCommand implements CommandInterface
     $pubTime = number_format(microtime(true) - $pubStart, 2) . "s";
     $this->printLineWithDots(color("✔", "green") . " {$totalAssets} assets published", $pubTime);
 
-    // 5. Minify Assets
-    echo "  5. MINIFICATION (Native PHP)\n";
+    // 6. Minify Assets
+    echo "  6. MINIFICATION (Native PHP)\n";
     $minStart = microtime(true);
     $stats = $this->minifyAssets();
     $minTime = number_format(microtime(true) - $minStart, 2) . "s";
@@ -77,15 +88,15 @@ class BuildCommand implements CommandInterface
       $this->printLineWithDots(color("●", "cyan") . " CSS [" . $stats['css'] . " files]", $minTime);
     }
 
-    // 6. Versioning (Content Hashing)
-    echo "  6. VERSIONING (Cache Busting)\n";
+    // 7. Versioning (Content Hashing)
+    echo "  7. VERSIONING (Cache Busting)\n";
     $verStart = microtime(true);
     $manifestCount = $this->versionAssets();
     $verTime = number_format(microtime(true) - $verStart, 2) . "s";
     $this->printLineWithDots(color("✔", "green") . " Manifest generated ({$manifestCount} assets)", $verTime);
 
-    // 7. Size Report
-    echo "  7. SIZE REPORT\n";
+    // 8. Size Report
+    echo "  8. SIZE REPORT\n";
     $this->reportSizes();
 
     $totalTime = number_format(microtime(true) - $start, 2);
@@ -553,5 +564,51 @@ class BuildCommand implements CommandInterface
     if (!is_dir($path)) {
       mkdir($path, 0755, true);
     }
+  }
+
+  private function buildProviderCache(): bool
+  {
+    $providersDir = __DIR__ . '/../../../addon/Providers';
+    $cacheDir = __DIR__ . '/../../../storage/cache';
+    $cacheFile = $cacheDir . '/providers.php';
+
+    if (!is_dir($providersDir)) {
+      if (file_exists($cacheFile)) {
+        unlink($cacheFile);
+      }
+      return false;
+    }
+
+    if (!is_dir($cacheDir)) {
+      mkdir($cacheDir, 0755, true);
+    }
+
+    $providers = [];
+    foreach (scandir($providersDir) as $file) {
+      if ($file === '.' || $file === '..') {
+        continue;
+      }
+      if (substr($file, -4) !== '.php') {
+        continue;
+      }
+
+      $className = pathinfo($file, PATHINFO_FILENAME);
+      $providerClass = 'Addon\\Providers\\' . $className;
+
+      if (!class_exists($providerClass)) {
+        throw new \RuntimeException("Provider class {$providerClass} tidak dapat ditemukan. Pastikan namespace dan autoload sudah benar.");
+      }
+
+      if (!is_subclass_of($providerClass, \App\Core\Foundation\ServiceProvider::class)) {
+        throw new \RuntimeException("Class {$providerClass} harus meng-extend App\\Core\\Foundation\\ServiceProvider.");
+      }
+
+      $providers[] = $providerClass;
+    }
+
+    $export = "<?php\n\nreturn " . var_export($providers, true) . ";\n";
+    file_put_contents($cacheFile, $export);
+
+    return count($providers) > 0;
   }
 }

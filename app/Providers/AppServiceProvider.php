@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use Addon\Services\FeederApiService;
 use App\Core\Database\Database;
 use App\Core\Database\DatabaseManager;
 use App\Core\Foundation\Container;
@@ -13,7 +12,7 @@ use App\Core\Queue\JobDispatcher;
 use App\Services\ConfigService;
 use App\Services\SeoService;
 use App\Services\SessionService;
-use Predis\Client as RedisClient;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
     // ConfigService (singleton)
     // Kita instansiasi di awal untuk menerapkan konfigurasi global (seperti Timezone)
     $configService = new ConfigService();
-    
+
     if ($timezone = $configService->get('timezone')) {
       date_default_timezone_set($timezone);
     }
@@ -59,10 +58,6 @@ class AppServiceProvider extends ServiceProvider
       return $container->resolve(DatabaseManager::class)->connection('mysql');
     });
 
-    // RedisClient (singleton) - Delegates to DatabaseManager (redis_default)
-    $container->bind(RedisClient::class, function () use ($container) {
-      return $container->resolve(DatabaseManager::class)->connection('redis_default');
-    });
 
     // JobDispatcher (singleton)
     $container->singleton(JobDispatcher::class, function () use ($container) {
@@ -72,10 +67,7 @@ class AppServiceProvider extends ServiceProvider
       );
     });
 
-    // FeederApiService (bisa per request, tidak perlu singleton)
-    $container->bind(FeederApiService::class, function () use ($container) {
-      return new FeederApiService($container->resolve(RedisClient::class));
-    });
+
 
     $container->singleton(SeoService::class, function () use ($container) {
       return new SeoService(

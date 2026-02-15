@@ -8,6 +8,7 @@ use App\Core\Http\Response;
 use App\Core\Routing\Router;
 use App\Core\View\View;
 use App\Core\View\PageMeta;
+use App\Core\Foundation\ServiceProvider;
 
 // Impor Interface dan Exception
 use App\Core\Interfaces\RenderableInterface;
@@ -195,14 +196,55 @@ class Application
 
   private function registerServices(): void
   {
-    // Path ke config disesuaikan karena posisi file Application sekarang lebih dalam 1 level
-    $providers = require __DIR__ . '/../../config/providers.php';
+    $engineProviders = [
+      \App\Providers\AppServiceProvider::class,
+    ];
 
-    foreach ($providers as $providerClass) {
+    foreach ($engineProviders as $providerClass) {
       if (class_exists($providerClass)) {
         $providerInstance = new $providerClass();
         $providerInstance->register($this->container);
       }
+    }
+
+    $cachePath = __DIR__ . '/../../../storage/cache/providers.php';
+
+    if (isProduction() && file_exists($cachePath)) {
+      $addonProviders = require $cachePath;
+      if (!is_array($addonProviders)) {
+        throw new \RuntimeException('Cache providers.php harus mengembalikan array berisi class provider.');
+      }
+    } else {
+      $addonProviders = [];
+      $providersDir = __DIR__ . '/../../../addon/Providers';
+      if (is_dir($providersDir)) {
+        foreach (scandir($providersDir) as $file) {
+          if ($file === '.' || $file === '..') {
+            continue;
+          }
+          if (substr($file, -4) !== '.php') {
+            continue;
+          }
+
+          $className = pathinfo($file, PATHINFO_FILENAME);
+          $providerClass = 'Addon\\Providers\\' . $className;
+
+          if (!class_exists($providerClass)) {
+            throw new \RuntimeException("Provider class {$providerClass} tidak dapat ditemukan. Pastikan namespace dan autoload sudah benar.");
+          }
+
+          if (!is_subclass_of($providerClass, ServiceProvider::class)) {
+            throw new \RuntimeException("Class {$providerClass} harus meng-extend App\\Core\\Foundation\\ServiceProvider.");
+          }
+
+          $addonProviders[] = $providerClass;
+        }
+      }
+    }
+
+    foreach ($addonProviders as $providerClass) {
+      $providerInstance = new $providerClass();
+      $providerInstance->register($this->container);
     }
   }
 

@@ -9,7 +9,7 @@ class ConfigService
   public function __construct()
   {
     // Muat konfigurasi utama dari folder config
-    $this->config = require __DIR__ . '/../config/app.php';
+    $this->config = require __DIR__ . '/../../config/app.php';
   }
 
   public function get(string $key, $default = null)

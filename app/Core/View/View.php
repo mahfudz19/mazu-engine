@@ -148,7 +148,7 @@ class View implements RenderableInterface
   public static function renderScripts(): string
   {
     // Menggunakan env() helper secara langsung karena App::config() tidak tersedia
-    $config = require __DIR__ . '/../../config/app.php';
+    $config = require __DIR__ . '/../../../config/app.php';
     $spaConfig = $config['spa'] ?? [];
     $authConfig = $config['auth'] ?? [];
 

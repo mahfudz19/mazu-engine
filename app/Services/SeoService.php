@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Core\PageMeta;
+use App\Core\View\PageMeta;
 use App\Core\Http\Request;
 
 class SeoService
