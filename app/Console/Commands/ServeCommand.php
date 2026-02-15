@@ -37,7 +37,7 @@ class ServeCommand implements CommandInterface
     }
 
     $basePath = realpath(__DIR__ . '/../../../public');
-    $serverScript = realpath(__DIR__ . '/../../../server.php');
+    $serverScript = realpath(__DIR__ . '/../server.php');
 
     // Check if port is already in use
     $connection = @fsockopen($host, $port);

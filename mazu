@@ -5,6 +5,8 @@
  * By: Mahfudz Masyhur
  */
 
+define('MAZU_ENV_PATH', __DIR__ . '/../');
+
 // 1. Load autoloader
 require_once __DIR__ . '/vendor/autoload.php';
 
