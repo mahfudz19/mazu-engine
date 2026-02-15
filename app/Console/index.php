@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * Personal framework Mazu
+ * By: Mahfudz Masyhur
+ */
+
+// 1. Load autoloader
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+// 2. Inisialisasi Engine Mazu
+$app = new App\Core\Foundation\Application();
+
+// 3. Tangkap argumen
+$argv = $_SERVER['argv'];
+$command = $argv[1] ?? 'list';
+
+echo color("
+  __  __      _      _____   _    _ 
+ |  \/  |    / \    |__  /  | |  | |
+ | |\/| |   / _ \     / /   | |  | |
+ | |  | |  / ___ \   / /_   | |__| |
+ |_|  |_| /_/   \_\ /____|   \____/ 
+", "green");
+
+echo " " . color("MAZU FRAMEWORK", "bold,green") . " version " . color("1.0.0", "yellow") . "\n";
+echo " " . color("By", "dim") . " " . color("Mahfudz Masyhur", "yellow") . "\n\n";
+
+// 4. Delegasi ke Console Kernel
+$kernel = new App\Console\ConsoleKernel($app);
+$exitCode = $kernel->handle($command, array_slice($argv, 2));
+exit($exitCode);
