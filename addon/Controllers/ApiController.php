@@ -5,6 +5,7 @@ namespace Addon\Controllers;
 use App\Core\Http\JsonResponse;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
+use Addon\Services\GoogleCalendarService;
 
 class ApiController
 {
@@ -22,28 +23,74 @@ class ApiController
 
   public function broadcastAgenda(Request $request, Response $response)
   {
-    // Mazu menggunakan input() untuk mengambil data body (JSON/POST)
-    $agenda = $request->input();
-    $targetEmail = $agenda['target_email'] ?? null;
+    // 1. Ambil data dari JSON Body
+    $payload = $request->input();
 
-    // if (!$targetEmail) {
-    //   return $response->json(['error' => 'Target email is required'], 400);
-    // }
+    // Validasi input minimal
+    if (empty($payload['target_email']) || empty($payload['start_time'])) {
+      return $response->json(['status' => 'error', 'message' => 'Data tidak lengkap'], 400);
+    }
 
     try {
-      $gcal = new \Addon\Services\GoogleCalendarService();
-      // Impersonate user dan masukkan agenda
-      $result = $gcal->impersonate($targetEmail)->insertEvent($agenda);
+      // 2. Inisialisasi Service
+      $gcal = new GoogleCalendarService();
+
+      // 3. Eksekusi (Chaining Method)
+      $eventId = $gcal->impersonate($payload['target_email'])
+        ->insertEvent($payload);
 
       return $response->json([
-        'status'  => 'success',
-        'event_id' => $result->getId()
+        'status' => 'success',
+        'message' => 'Agenda berhasil dijadwalkan',
+        'data' => ['event_id' => $eventId]
       ]);
     } catch (\Exception $e) {
+      // Log error untuk debugging developer
+      // logger()->error($e->getMessage()); 
+
+      return $response->json([
+        'status' => 'error',
+        'message' => 'Gagal koneksi ke Google Calendar: ' . $e->getMessage()
+      ], 500);
+    }
+  }
+
+  public function testBroadcast(Request $request, Response $response)
+  {
+    try {
+      // 1. Inisialisasi Service
+      $gcal = new GoogleCalendarService();
+
+      // 2. DATA DUMMY (Ganti email ini dengan email asli di domain @inbitef.ac.id)
+      $targetEmail = 'sultan.syahabana@inbitef.ac.id';
+
+      // 3. Setup Data Event Sederhana
+      $eventData = [
+        'title'       => '[TEST SYSTEM] Rapat Percobaan',
+        'description' => 'Ini adalah tes broadcast otomatis dari sistem Mazu.',
+        'location'    => 'Ruang Rapat Virtual',
+        // Mulai besok jam 09:00 pagi
+        'start_time'  => date('c', strtotime('tomorrow 09:00')),
+        // Selesai besok jam 10:00 pagi
+        'end_time'    => date('c', strtotime('tomorrow 10:00')),
+      ];
+
+      // 4. Eksekusi
+      $eventId = $gcal->impersonate($targetEmail)
+        ->insertEvent($eventData);
+
+      return $response->json([
+        'status' => 'success',
+        'message' => 'Berhasil insert ke kalender ' . $targetEmail,
+        'event_id' => $eventId,
+        'link' => "https://calendar.google.com/calendar/r/eventedit/" . $eventId
+      ]);
+    } catch (\Exception $e) {
+      // Tampilkan error lengkap biar ketahuan salahnya dimana
       return $response->json([
         'status' => 'error',
         'message' => $e->getMessage(),
-        'file' => basename($e->getFile()),
+        'file' => $e->getFile(),
         'line' => $e->getLine()
       ], 500);
     }
