@@ -93,6 +93,13 @@ class MySqlSchemaAdapter implements SchemaAdapterInterface
       case 'boolean':
       case 'bool':
         return 'TINYINT(1)';
+      case 'enum':
+        if (empty($def['values']) || !is_array($def['values'])) {
+          throw new \RuntimeException("Field type 'enum' requires 'values' array definition.");
+        }
+        // Format: ENUM('A', 'B', 'C')
+        $values = array_map(fn($v) => "'$v'", $def['values']);
+        return "ENUM(" . implode(", ", $values) . ")";
       case 'json':
         return 'JSON';
       case 'decimal':

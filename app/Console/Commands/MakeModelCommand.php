@@ -66,8 +66,8 @@ class {{CLASS_NAME}} extends Model
     protected bool $timestamps = true;
 
     // Kolom timestamp (opsional untuk diubah)
-    protected string $createdAtColumn = 'created_at';
-    protected string $updatedAtColumn = 'updated_at';
+    // protected string $createdAtColumn = 'created_at';
+    // protected string $updatedAtColumn = 'updated_at';
 
     /**
      * Schema untuk 'php mazu migrate'
