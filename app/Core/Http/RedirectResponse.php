@@ -12,7 +12,13 @@ class RedirectResponse extends Response
 
   public function __construct(?Container $container, string $url, int $statusCode = 302)
   {
-    $this->targetUrl = getBaseUrl($url);
+    // Cek apakah URL adalah absolute (http/https)
+    if (preg_match('#^https?://#i', $url)) {
+        $this->targetUrl = $url;
+    } else {
+        $this->targetUrl = getBaseUrl($url);
+    }
+    
     // Teruskan container ke parent constructor
     parent::__construct($container, '', $statusCode, ['Location' => $this->targetUrl]);
   }
