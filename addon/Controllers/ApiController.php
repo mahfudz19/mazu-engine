@@ -6,12 +6,62 @@ use App\Core\Http\JsonResponse;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
 use Addon\Services\GoogleCalendarService;
+use Addon\Services\GoogleDirectoryService;
 
 class ApiController
 {
   public function index(Request $request, Response $response)
   {
     return $response->setContent('Rest API Connection Success!');
+  }
+
+  public function testDirectory(Request $request, Response $response)
+  {
+    try {
+      // 1. Inisialisasi Service
+      $directory = new GoogleDirectoryService();
+      
+      // 2. Impersonate sebagai SUPER ADMIN (Wajib!)
+      // Menggunakan email Pak Mahfudz (Super Admin)
+      $adminEmail = 'mahfudz@inbitef.ac.id'; 
+      
+      // 3. Ambil Semua User
+      $users = $directory->impersonate($adminEmail)->getAllUsers();
+
+      return $response->json([
+        'status' => 'success',
+        'total_users' => count($users),
+        'data' => $users
+      ]);
+    } catch (\Exception $e) {
+      return $response->json([
+        'status' => 'error',
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+      ], 500);
+    }
+  }
+
+  public function checkSchedule(Request $request, Response $response)
+  {
+    try {
+      $gcal = new GoogleCalendarService();
+
+      // Target User yang mau diintip jadwalnya
+      $targetEmail = 'sultan.syahabana@inbitef.ac.id';
+
+      // Ambil 10 event ke depan
+      $events = $gcal->impersonate($targetEmail)->listEvents();
+
+      return $response->json([
+        'status' => 'success',
+        'target' => $targetEmail,
+        'upcoming_events' => $events
+      ]);
+    } catch (\Exception $e) {
+      return $response->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
   }
 
   public function test(Request $request, Response $response): JsonResponse

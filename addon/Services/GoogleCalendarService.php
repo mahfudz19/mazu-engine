@@ -72,32 +72,71 @@ class GoogleCalendarService
       throw new Exception("Please call impersonate() before inserting an event.");
     }
 
-    // Mapping data array ke Google Event Object
-    // Menggunakan timezone 'Asia/Jakarta' sesuai kebutuhan kampus Indonesia
-    $event = new Event([
+    // Mapping Data Agenda ke Google Event Object
+    // Support field lengkap: description, location, attendees, dll.
+    $eventConfig = [
       'summary' => $agendaData['title'] ?? 'Agenda Kampus',
-      'location' => $agendaData['location'] ?? '',
       'description' => $agendaData['description'] ?? '',
+      'location' => $agendaData['location'] ?? '',
       'start' => [
-        'dateTime' => $agendaData['start_time'], // Format ISO 8601: 2026-02-15T09:00:00+07:00
+        'dateTime' => $agendaData['start_time'], // Wajib format ISO 8601 (2023-10-25T09:00:00+07:00)
         'timeZone' => 'Asia/Jakarta',
       ],
       'end' => [
         'dateTime' => $agendaData['end_time'],
         'timeZone' => 'Asia/Jakarta',
       ],
-      'reminders' => [
-        'useDefault' => false,
-        'overrides' => [
-          ['method' => 'popup', 'minutes' => 30],
-        ],
-      ],
-    ]);
+    ];
 
-    // Eksekusi API ke Google
-    // 'primary' merujuk ke kalender utama milik user yang di-impersonate
+    // Tambahkan Attendees jika ada
+    if (!empty($agendaData['attendees']) && is_array($agendaData['attendees'])) {
+      // Format: [['email' => 'a@test.com'], ['email' => 'b@test.com']]
+      $eventConfig['attendees'] = $agendaData['attendees'];
+    }
+
+    $event = new Event($eventConfig);
+
+    // Insert ke kalender 'primary' milik user yang di-impersonate
     $createdEvent = $this->service->events->insert('primary', $event);
 
     return $createdEvent->getId();
+  }
+
+  /**
+   * Mengambil daftar event dari kalender user
+   * @param string $timeMin Waktu mulai (ISO 8601), default: sekarang
+   * @param int $maxResults Jumlah maksimal event yang diambil
+   */
+  public function listEvents(string $timeMin = 'now', int $maxResults = 10): array
+  {
+    if (!$this->service) {
+      throw new Exception("Please call impersonate() first.");
+    }
+
+    if ($timeMin === 'now') {
+      $timeMin = date('c'); // Waktu saat ini
+    }
+
+    $params = [
+      'orderBy' => 'startTime',
+      'singleEvents' => true,
+      'timeMin' => $timeMin,
+      'maxResults' => $maxResults,
+    ];
+
+    $events = $this->service->events->listEvents('primary', $params);
+
+    $results = [];
+    foreach ($events->getItems() as $event) {
+      $results[] = [
+        'id' => $event->getId(),
+        'summary' => $event->getSummary(),
+        'start' => $event->getStart()->dateTime ?? $event->getStart()->date,
+        'end' => $event->getEnd()->dateTime ?? $event->getEnd()->date,
+        'link' => $event->getHtmlLink()
+      ];
+    }
+
+    return $results;
   }
 }
