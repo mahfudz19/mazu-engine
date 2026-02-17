@@ -14,11 +14,11 @@ class RedirectResponse extends Response
   {
     // Cek apakah URL adalah absolute (http/https)
     if (preg_match('#^https?://#i', $url)) {
-        $this->targetUrl = $url;
+      $this->targetUrl = $url;
     } else {
-        $this->targetUrl = getBaseUrl($url);
+      $this->targetUrl = getBaseUrl($url);
     }
-    
+
     // Teruskan container ke parent constructor
     parent::__construct($container, '', $statusCode, ['Location' => $this->targetUrl]);
   }
