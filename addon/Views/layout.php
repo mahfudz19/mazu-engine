@@ -26,8 +26,8 @@
     <div class="mazu-container">
       <!-- Global Header -->
       <header class="mazu-header">
-        <a data-spa href="/" class="mazu-brand">
-          <img src="/logo_app/mazu-logo.svg" alt="Mazu Engine" height="40" />
+        <a data-spa href="<?= getBaseUrl('/') ?>" class="mazu-brand">
+          <img src="<?= getBaseUrl('/logo_app/mazu-logo.svg') ?>" alt="Mazu Engine" height="40" />
         </a>
         <nav class="mazu-nav">
           <a href="https://github.com/mazu-framework/docs" target="_blank">Documentation</a>
