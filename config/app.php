@@ -29,7 +29,7 @@ return [
   'environment' => $environment,
 
   'debug' => env('APP_DEBUG', $isDev ? 'true' : 'false') === 'true',
-  'app_name' => env('APP_NAME', 'MAZU'),
+  'app_name' => env('APP_NAME', 'Mazu'),
   'timezone' => env('APP_TIMEZONE', date_default_timezone_get()),
 
   'queue' => [

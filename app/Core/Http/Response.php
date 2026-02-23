@@ -118,7 +118,7 @@ class Response
 
     // Buat objek PageMeta dari array yang diberikan
     $pageMeta = new PageMeta(
-      $metaArray['title'] ?? env('APP_NAME', 'Talent'),
+      $metaArray['title'] ?? env('APP_NAME', 'Mazu'),
       $metaArray['description'] ?? null,
       $metaArray['image'] ?? null,
       $metaArray['keywords'] ?? null,
