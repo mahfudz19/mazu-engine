@@ -99,7 +99,7 @@ class Application
         $html = $viewService->render($errorView);
         $response = new Response($this->container, $html, $e->getStatusCode());
       } catch (\Throwable $renderError) {
-        $response = $this->renderFallbackError($e->getStatusCode(), $e->getMessage(), $renderError);
+        $response = $this->renderFallbackError($e->getStatusCode(), $e->getMessage(), $e ?: $renderError);
       }
     } catch (AuthenticationException $e) {
       $wantsJson = $this->request->wantsJson() || str_starts_with($this->request->getPath(), '/api');
@@ -145,7 +145,7 @@ class Application
             $html = $viewService->render($errorView);
             $response = new Response($this->container, $html, 403);
           } catch (\Throwable $renderError) {
-            $response = $this->renderFallbackError(403, 'Terjadi kesalahan kritis saat menampilkan halaman error.', $renderError);
+            $response = $this->renderFallbackError(403, $e->getMessage() ?: 'Terjadi kesalahan kritis saat menampilkan halaman error.', $e ?: $renderError);
           }
         }
       }
