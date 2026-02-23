@@ -297,8 +297,8 @@ class {{CLASS_NAME}} implements MiddlewareInterface
 
   public function handle($request, Closure $next, array $params = [])
   {
-    // Menggunakan key 'logged_in' sesuai standar proyek saat ini
-    if ($this->session->get('logged_in') !== true) {
+    // Menggunakan key 'is_logged_in' sesuai standar proyek saat ini
+    if ($this->session->get('is_logged_in') !== true) {
       throw new AuthenticationException('Unauthenticated');
     }
 
@@ -342,7 +342,7 @@ class {{CLASS_NAME}} implements MiddlewareInterface
 
   public function handle($request, Closure $next, array $params = [])
   {
-    if ($this->session->get('logged_in') !== true) {
+    if ($this->session->get('is_logged_in') !== true) {
       throw new AuthenticationException('Unauthenticated');
     }
 
@@ -399,7 +399,7 @@ class {{CLASS_NAME}} implements MiddlewareInterface
   public function handle($request, Closure $next, array $params = [])
   {
     // Cek key session yang sama dengan AuthMiddleware
-    if ($this->session->get('logged_in') === true) {
+    if ($this->session->get('is_logged_in') === true) {
        // Lempar exception yang akan ditangkap oleh Handler untuk redirect ke dashboard/home
        // Pesan 'RedirectIfAuthenticated' adalah sinyal khusus untuk Exception Handler
        throw new AuthorizationException('RedirectIfAuthenticated');
