@@ -1,21 +1,332 @@
 :root {
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-900: #1e3a8a;
-  --color-border-light: #f1f5f9;
+  /* Material Design 3 - Light Theme Palette */
+  
+  /* Primary: Deep Cyan (Readable on Light) */
+  --md-sys-color-primary: #006874;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #97F0FF;
+  --md-sys-color-on-primary-container: #001F24;
 
-  /* Native CSS Colors */
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --neutral-50: #f8fafc;
-  --neutral-100: #f1f5f9;
-  --neutral-200: #e2e8f0;
-  --neutral-300: #cbd5e1;
-  --primary-500: #3b82f6;
-  --primary-600: var(--color-primary-600);
-  --primary-700: var(--color-primary-700);
+  /* Secondary: Deep Green (Readable on Light) */
+  --md-sys-color-secondary: #006C4C;
+  --md-sys-color-on-secondary: #FFFFFF;
+  --md-sys-color-secondary-container: #89F8C7;
+  --md-sys-color-on-secondary-container: #002114;
+
+  /* Tertiary: Purple */
+  --md-sys-color-tertiary: #6F528A;
+  --md-sys-color-on-tertiary: #FFFFFF;
+  --md-sys-color-tertiary-container: #F0DBFF;
+  --md-sys-color-on-tertiary-container: #290D42;
+
+  /* Error */
+  --md-sys-color-error: #BA1A1A;
+  --md-sys-color-on-error: #FFFFFF;
+  --md-sys-color-error-container: #FFDAD6;
+  --md-sys-color-on-error-container: #410002;
+
+  /* Surface & Background (Light) */
+  --md-sys-color-background: #F8FDFF; /* Very faint blue-white */
+  --md-sys-color-on-background: #001F25; /* Very dark cyan-black */
+  
+  --md-sys-color-surface: #F8FDFF;
+  --md-sys-color-on-surface: #001F25;
+  
+  --md-sys-color-surface-variant: #DBE4E6;
+  --md-sys-color-on-surface-variant: #3F484A;
+  
+  --md-sys-color-outline: #6F797A;
+  --md-sys-color-outline-variant: #BFC8CC;
+
+  /* Surfaces with Elevation Overlay (Light Mode) */
+  --md-surface-1: #F0FBFD; /* Surface 1 */
+  --md-surface-2: #ECFAFC; /* Surface 2 */
+  --md-surface-3: #E7F8FB; /* Surface 3 */
+  --md-surface-4: #E5F8FA; /* Surface 4 */
+  --md-surface-5: #E2F7F9; /* Surface 5 */
+
+  /* Mapping to Mazu Variables for Compatibility */
+  --color-primary-50: var(--md-sys-color-primary-container);
+  --color-primary-100: var(--md-sys-color-primary-container);
+  --color-primary-600: var(--md-sys-color-primary);
+  --color-primary-700: var(--md-sys-color-on-primary-container);
+  --color-primary-900: var(--md-sys-color-on-primary);
+  
+  --color-accent: var(--md-sys-color-secondary);
+  --color-border-light: var(--md-sys-color-outline-variant);
+
+  /* Native CSS Colors Mapped */
+  --text-primary: var(--md-sys-color-on-background);
+  --text-secondary: var(--md-sys-color-on-surface-variant);
+  
+  --neutral-50: var(--md-sys-color-background);
+  --neutral-100: #FFFFFF; /* Cards are pure white on light theme */
+  --neutral-200: #E0E0E0; /* Light borders */
+  --neutral-300: #BDBDBD;
+  
+  --primary-500: var(--md-sys-color-primary);
+  --primary-600: var(--md-sys-color-primary);
+  --primary-700: var(--md-sys-color-primary-container);
+}
+
+/* Base Styles */
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--md-sys-color-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--md-sys-color-on-primary-container);
+}
+
+/* Typography Utilities */
+.display-large {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-size: 3.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--md-sys-color-secondary), var(--md-sys-color-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1.5rem;
+}
+
+.headline-medium {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 1.5rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.body-large {
+  font-size: 1.125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Layout Utilities */
+.mazu-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Header (Top App Bar) */
+.mazu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 0;
+  margin-bottom: 64px;
+}
+
+.mazu-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.mazu-brand:hover {
+  opacity: 0.8;
+}
+
+.mazu-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.mazu-nav a {
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.9rem;
+  padding: 10px 20px;
+  border-radius: 24px;
+  transition: all 0.2s;
+}
+
+.mazu-nav a:hover {
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* Hero Section */
+.mazu-hero {
+  text-align: center;
+  padding: 80px 0 120px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  height: 48px;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  border: none;
+  gap: 8px;
+}
+
+.btn-filled {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.btn-filled:hover {
+  background-color: var(--md-sys-color-on-primary-container);
+  box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-outlined {
+  background-color: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-primary);
+}
+
+.btn-outlined:hover {
+  background-color: rgba(0, 229, 255, 0.08);
+  border-color: var(--md-sys-color-primary);
+}
+
+.hero-actions {
+  margin-top: 40px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+/* Grid System */
+.mazu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  margin-bottom: 80px;
+}
+
+/* Cards (Material Design 3) */
+.mazu-card {
+  background-color: var(--md-surface-1);
+  border-radius: 28px;
+  padding: 32px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.mazu-card:hover {
+  background-color: var(--md-surface-2);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+.mazu-card-icon {
+  width: 64px;
+  height: 64px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 24px;
+}
+
+.mazu-card-title {
+  margin: 0 0 16px 0;
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 1.5rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.mazu-card-desc {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Footer */
+.mazu-footer {
+  padding: 48px 0;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.875rem;
+}
+
+.mazu-version {
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .display-large {
+    font-size: 2.5rem;
+  }
+  
+  .mazu-hero {
+    padding: 40px 0 80px;
+  }
+
+  .mazu-header {
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .mazu-nav {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .mazu-footer {
+    flex-direction: column;
+    gap: 24px;
+    text-align: center;
+  }
+  
+  .hero-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+  }
 }
 
 /* Global Progress Bar */
@@ -34,13 +345,13 @@
   height: 100%;
   background: linear-gradient(
     to right,
-    var(--color-primary-600),
-    var(--color-primary-700),
-    var(--color-primary-600)
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary),
+    var(--md-sys-color-primary)
   );
   width: 0;
   transition:
     width 0.2s ease-out,
     opacity 0.3s;
-  box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
 }

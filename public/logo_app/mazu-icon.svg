@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="mazuGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FF66" />
+      <stop offset="100%" stop-color="#00E5FF" />
+    </linearGradient>
+  </defs>
+
+  <rect width="100" height="100" rx="22" fill="#121212" />
+
+  <path d="M 26 68 V 32 L 50 52 L 74 32 V 68"
+    fill="none"
+    stroke="url(#mazuGradient)"
+    stroke-width="10"
+    stroke-linecap="square"
+    stroke-linejoin="miter" />
+
+  <rect x="42" y="76" width="16" height="6" fill="#00FF66" />
+</svg>

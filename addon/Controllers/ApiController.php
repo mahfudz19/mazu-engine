@@ -20,11 +20,11 @@ class ApiController
     try {
       // 1. Inisialisasi Service
       $directory = new GoogleDirectoryService();
-      
+
       // 2. Impersonate sebagai SUPER ADMIN (Wajib!)
       // Menggunakan email Pak Mahfudz (Super Admin)
-      $adminEmail = 'mahfudz@inbitef.ac.id'; 
-      
+      $adminEmail = 'mahfudz@inbitef.ac.id';
+
       // 3. Ambil Semua User
       $users = $directory->impersonate($adminEmail)->getAllUsers();
 

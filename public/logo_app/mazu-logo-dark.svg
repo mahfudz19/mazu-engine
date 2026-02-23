@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 100" width="350" height="100">
+  <defs>
+    <linearGradient id="mazuGradientFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FF66" />
+      <stop offset="100%" stop-color="#00E5FF" />
+    </linearGradient>
+  </defs>
+
+  <g transform="scale(0.8) translate(10, 12.5)">
+    <rect width="100" height="100" rx="22" fill="#121212" />
+    <path d="M 26 68 V 32 L 50 52 L 74 32 V 68"
+      fill="none"
+      stroke="url(#mazuGradientFull)"
+      stroke-width="10"
+      stroke-linecap="square"
+      stroke-linejoin="miter" />
+    <rect x="42" y="76" width="16" height="6" fill="#00FF66" />
+  </g>
+
+  <text x="105" y="65"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-size="46"
+    font-weight="900"
+    fill="#F9FAFB"
+    letter-spacing="-1">MAZU</text>
+
+  <text x="248" y="65"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-size="46"
+    font-weight="300"
+    fill="#9CA3AF"
+    letter-spacing="1">ENGINE</text>
+</svg>

@@ -13,8 +13,6 @@
   <!-- Auto-Injected Styles -->
   <?= App\Core\View\View::renderStyles() ?>
 
-  <!-- Bootstrap Icons (opsional) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 
 <body>
@@ -23,33 +21,34 @@
     <div id="global-progress-bar-inner" class="progress-bar-fill"></div>
   </div>
 
-  <!-- Header Sederhana -->
-  <header class="bg-white shadow-sm py-4 px-6 mb-6 flex justify-between items-center">
-    <a href="/" class="text-xl font-bold text-gray-800 flex items-center gap-2">
-      <i class="bi bi-calendar-event text-blue-600"></i>
-      Campus Agenda
-    </a>
-
-    <div>
-      <?php
-      if (session_status() === PHP_SESSION_NONE) session_start();
-      $isLoggedIn = $_SESSION['is_logged_in'] ?? false;
-      ?>
-
-      <?php if ($isLoggedIn): ?>
-        <a href="/dashboard" class="text-gray-600 hover:text-blue-600 font-medium mr-4">Dashboard</a>
-        <a href="/logout" class="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">Logout</a>
-      <?php else: ?>
-        <a href="/login" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
-          <i class="bi bi-google"></i> Login
+  <!-- Content Injection Point -->
+  <div>
+    <div class="mazu-container">
+      <!-- Global Header -->
+      <header class="mazu-header">
+        <a data-spa href="/" class="mazu-brand">
+          <img src="/logo_app/mazu-logo.svg" alt="Mazu Engine" height="40" />
         </a>
-      <?php endif; ?>
-    </div>
-  </header>
+        <nav class="mazu-nav">
+          <a href="https://github.com/mazu-framework/docs" target="_blank">Documentation</a>
+          <a href="https://github.com/mazu-framework" target="_blank">GitHub</a>
+        </nav>
+      </header>
 
-  <!-- Variabel ini akan berisi konten dari layout anak atau halaman  -->
-  <div id="app-content" data-layout="layout.php">
-    <?= $children; ?>
+      <main id="app-content" data-layout="layout.php">
+        <?= $children; ?>
+      </main>
+
+      <!-- Global Footer -->
+      <footer class="mazu-footer">
+        <div>
+          &copy; <?= date('Y') ?> Mazu Framework. All rights reserved.
+        </div>
+        <div class="mazu-version">
+          v1.0.0 (PHP <?= phpversion() ?>)
+        </div>
+      </footer>
+    </div>
   </div>
 
   <!-- SPA Script -->

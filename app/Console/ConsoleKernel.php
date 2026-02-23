@@ -13,6 +13,7 @@ use App\Console\Commands\ServeCommand;
 use App\Console\Commands\QueueWorkCommand;
 use App\Console\Commands\MakeJobCommand;
 use App\Console\Commands\AboutCommand;
+use App\Console\Commands\GoogleAuthSetupCommand;
 use App\Core\Foundation\Application;
 
 class ConsoleKernel
@@ -40,6 +41,7 @@ class ConsoleKernel
     $this->add(new QueueWorkCommand($this->app));
     $this->add(new MakeJobCommand($this->app));
     $this->add(new AboutCommand($this->app));
+    $this->add(new GoogleAuthSetupCommand($this->app));
   }
 
   private function add(CommandInterface $command): void
