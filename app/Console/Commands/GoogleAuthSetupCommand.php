@@ -742,10 +742,10 @@ PHP;
 
     if ($withRole) {
       if (strpos($updated, "'/api/super-admin-test'") === false) {
-        $updated .= "\n" . "\$router->get('/api/super-admin-test', [\\Addon\\Controllers\\AuthController::class, 'superAdminTest'], ['role:super_admin']);";
+        $updated .= "\n" . "\$router->get('/api/super-admin-test', [\\Addon\\Controllers\\AuthController::class, 'superAdminTest'], ['auth','role:super_admin']);";
       }
       if (strpos($updated, "'/api/admin-test'") === false) {
-        $updated .= "\n" . "\$router->get('/api/admin-test', [\\Addon\\Controllers\\AuthController::class, 'adminTest'], ['role:admin']);";
+        $updated .= "\n" . "\$router->get('/api/admin-test', [\\Addon\\Controllers\\AuthController::class, 'adminTest'], ['auth', 'role:admin']);";
       }
     }
 
