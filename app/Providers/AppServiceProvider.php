@@ -8,10 +8,12 @@ use App\Core\Foundation\Container;
 use App\Core\Foundation\ServiceProvider;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
+use App\Core\Interfaces\RateLimiterInterface;
 use App\Core\Queue\JobDispatcher;
 use App\Services\ConfigService;
 use App\Services\SeoService;
 use App\Services\SessionService;
+use App\Services\FileRateLimiter;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -40,6 +42,15 @@ class AppServiceProvider extends ServiceProvider
       static $instance = null;
       if ($instance === null) {
         $instance = new SessionService();
+      }
+      return $instance;
+    });
+
+    // RateLimiterInterface -> FileRateLimiter (default, zero-config)
+    $container->bind(RateLimiterInterface::class, function () {
+      static $instance = null;
+      if ($instance === null) {
+        $instance = new FileRateLimiter();
       }
       return $instance;
     });
