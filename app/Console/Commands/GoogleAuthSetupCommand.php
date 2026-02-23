@@ -553,15 +553,10 @@ class AuthController
     $user = $this->session->get('user', []);
     $role = $user['role'] ?? 'User';
 
-    return $response->renderPage([
-      'user' => $user,
-      'role' => $role,
-    ], [
-      'path' => 'dashboard',
-      'meta' => [
-        'title' => 'Dashboard',
-      ],
-    ]);
+    return $response->renderPage(
+      ['user' => $user, 'role' => $role],
+      ['meta' => ['title' => 'Dashboard']]
+    );
   }
 PHP;
 
