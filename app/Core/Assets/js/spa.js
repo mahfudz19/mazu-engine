@@ -76,6 +76,28 @@ function initSpaNavigation() {
     navigateTo(url, options);
   });
 
+  // Handle SPA form submissions (form[data-spa])
+  document.body.addEventListener("submit", (e) => {
+    const form = e.target.closest("form[data-spa]");
+    if (!form) return;
+
+    e.preventDefault();
+
+    const action = form.getAttribute("action") || window.location.href;
+    const methodAttr =
+      form.getAttribute("data-spa-method") ||
+      form.getAttribute("method") ||
+      "GET";
+    const method = methodAttr.toUpperCase();
+
+    const formData = new FormData(form);
+
+    navigateTo(action, {
+      method,
+      body: method === "GET" ? null : formData,
+    });
+  });
+
   // Handle Back/Forward browser buttons
   window.addEventListener("popstate", (e) => {
     if (e.state && e.state.url) {
