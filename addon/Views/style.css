@@ -1,49 +1,49 @@
 :root {
   /* Material Design 3 - Light Theme Palette */
-  
+
   /* Primary: Deep Cyan (Readable on Light) */
   --md-sys-color-primary: #006874;
-  --md-sys-color-on-primary: #FFFFFF;
-  --md-sys-color-primary-container: #97F0FF;
-  --md-sys-color-on-primary-container: #001F24;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #97f0ff;
+  --md-sys-color-on-primary-container: #001f24;
 
   /* Secondary: Deep Green (Readable on Light) */
-  --md-sys-color-secondary: #006C4C;
-  --md-sys-color-on-secondary: #FFFFFF;
-  --md-sys-color-secondary-container: #89F8C7;
+  --md-sys-color-secondary: #006c4c;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #89f8c7;
   --md-sys-color-on-secondary-container: #002114;
 
   /* Tertiary: Purple */
-  --md-sys-color-tertiary: #6F528A;
-  --md-sys-color-on-tertiary: #FFFFFF;
-  --md-sys-color-tertiary-container: #F0DBFF;
-  --md-sys-color-on-tertiary-container: #290D42;
+  --md-sys-color-tertiary: #6f528a;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #f0dbff;
+  --md-sys-color-on-tertiary-container: #290d42;
 
   /* Error */
-  --md-sys-color-error: #BA1A1A;
-  --md-sys-color-on-error: #FFFFFF;
-  --md-sys-color-error-container: #FFDAD6;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
   --md-sys-color-on-error-container: #410002;
 
   /* Surface & Background (Light) */
-  --md-sys-color-background: #F8FDFF; /* Very faint blue-white */
-  --md-sys-color-on-background: #001F25; /* Very dark cyan-black */
-  
-  --md-sys-color-surface: #F8FDFF;
-  --md-sys-color-on-surface: #001F25;
-  
-  --md-sys-color-surface-variant: #DBE4E6;
-  --md-sys-color-on-surface-variant: #3F484A;
-  
-  --md-sys-color-outline: #6F797A;
-  --md-sys-color-outline-variant: #BFC8CC;
+  --md-sys-color-background: #f8fdff; /* Very faint blue-white */
+  --md-sys-color-on-background: #001f25; /* Very dark cyan-black */
+
+  --md-sys-color-surface: #f8fdff;
+  --md-sys-color-on-surface: #001f25;
+
+  --md-sys-color-surface-variant: #dbe4e6;
+  --md-sys-color-on-surface-variant: #3f484a;
+
+  --md-sys-color-outline: #6f797a;
+  --md-sys-color-outline-variant: #bfc8cc;
 
   /* Surfaces with Elevation Overlay (Light Mode) */
-  --md-surface-1: #F0FBFD; /* Surface 1 */
-  --md-surface-2: #ECFAFC; /* Surface 2 */
-  --md-surface-3: #E7F8FB; /* Surface 3 */
-  --md-surface-4: #E5F8FA; /* Surface 4 */
-  --md-surface-5: #E2F7F9; /* Surface 5 */
+  --md-surface-1: #f0fbfd; /* Surface 1 */
+  --md-surface-2: #ecfafc; /* Surface 2 */
+  --md-surface-3: #e7f8fb; /* Surface 3 */
+  --md-surface-4: #e5f8fa; /* Surface 4 */
+  --md-surface-5: #e2f7f9; /* Surface 5 */
 
   /* Mapping to Mazu Variables for Compatibility */
   --color-primary-50: var(--md-sys-color-primary-container);
@@ -51,19 +51,19 @@
   --color-primary-600: var(--md-sys-color-primary);
   --color-primary-700: var(--md-sys-color-on-primary-container);
   --color-primary-900: var(--md-sys-color-on-primary);
-  
+
   --color-accent: var(--md-sys-color-secondary);
   --color-border-light: var(--md-sys-color-outline-variant);
 
   /* Native CSS Colors Mapped */
   --text-primary: var(--md-sys-color-on-background);
   --text-secondary: var(--md-sys-color-on-surface-variant);
-  
+
   --neutral-50: var(--md-sys-color-background);
-  --neutral-100: #FFFFFF; /* Cards are pure white on light theme */
-  --neutral-200: #E0E0E0; /* Light borders */
-  --neutral-300: #BDBDBD;
-  
+  --neutral-100: #ffffff; /* Cards are pure white on light theme */
+  --neutral-200: #e0e0e0; /* Light borders */
+  --neutral-300: #bdbdbd;
+
   --primary-500: var(--md-sys-color-primary);
   --primary-600: var(--md-sys-color-primary);
   --primary-700: var(--md-sys-color-primary-container);
@@ -71,7 +71,11 @@
 
 /* Base Styles */
 body {
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   background-color: var(--md-sys-color-background);
   color: var(--md-sys-color-on-background);
   margin: 0;
@@ -97,7 +101,11 @@ a:hover {
   font-size: 3.5rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--md-sys-color-secondary), var(--md-sys-color-primary));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-secondary),
+    var(--md-sys-color-primary)
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -197,6 +205,7 @@ a:hover {
   background-color: var(--md-sys-color-on-primary-container);
   box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
   transform: translateY(-2px);
+  color: white;
 }
 
 .btn-outlined {
@@ -298,7 +307,7 @@ a:hover {
   .display-large {
     font-size: 2.5rem;
   }
-  
+
   .mazu-hero {
     padding: 40px 0 80px;
   }
@@ -319,11 +328,11 @@ a:hover {
     gap: 24px;
     text-align: center;
   }
-  
+
   .hero-actions {
     flex-direction: column;
   }
-  
+
   .btn {
     width: 100%;
   }
