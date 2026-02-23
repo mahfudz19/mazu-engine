@@ -218,7 +218,7 @@ class GoogleAuthSetupCommand implements CommandInterface
     ];
 
     if ($withRole) {
-      $schemaLines[] = "        'role' => ['type' => 'string', 'nullable' => false, 'default' => 'admin'],";
+      $schemaLines[] = "        'role' => ['type' => 'enum', 'values' => ['super_admin', 'admin'], 'nullable' => false, 'default' => 'admin'],";
     }
 
     $schema = implode("\n", $schemaLines) . "\n";
