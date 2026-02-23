@@ -7,9 +7,7 @@ use App\Console\Contracts\CommandInterface;
 
 class MakeMiddlewareCommand implements CommandInterface
 {
-  public function __construct(
-    private Application $app,
-  ) {}
+  public function __construct(private Application $app) {}
 
   public function getName(): string
   {
@@ -47,6 +45,7 @@ class MakeMiddlewareCommand implements CommandInterface
     $isThrottleMiddleware = strtolower($name) === 'throttlemiddleware';
     $isAuthMiddleware = strtolower($name) === 'authmiddleware';
     $isRoleMiddleware = strtolower($name) === 'rolemiddleware';
+    $isGuestMiddleware = strtolower($name) === 'guestmiddleware';
 
     if ($isCsrfMiddleware) {
       $template = <<<'PHP'
@@ -298,7 +297,8 @@ class {{CLASS_NAME}} implements MiddlewareInterface
 
   public function handle($request, Closure $next, array $params = [])
   {
-    if ($this->session->get('is_logged_in') !== true) {
+    // Menggunakan key 'logged_in' sesuai standar proyek saat ini
+    if ($this->session->get('logged_in') !== true) {
       throw new AuthenticationException('Unauthenticated');
     }
 
@@ -342,17 +342,67 @@ class {{CLASS_NAME}} implements MiddlewareInterface
 
   public function handle($request, Closure $next, array $params = [])
   {
-    if ($this->session->get('is_logged_in') !== true) {
+    if ($this->session->get('logged_in') !== true) {
       throw new AuthenticationException('Unauthenticated');
     }
 
-    $user = $this->session->get('user', []);
-    $role = is_array($user) ? ($user['role'] ?? null) : null;
+    // Sesuaikan dengan struktur session user di aplikasi Anda
+    // Default: $_SESSION['user'] = ['role' => 'admin', ...]
+    // Atau jika disimpan langsung: $_SESSION['role'] = 'admin'
+    
+    $user = $this->session->get('user');
+    $role = null;
+
+    if (is_array($user)) {
+        $role = $user['role'] ?? null;
+    } else {
+        // Fallback jika role disimpan terpisah
+        $role = $this->session->get('role');
+    }
 
     if (!empty($params)) {
       if (!$role || !in_array($role, $params, true)) {
         throw new AuthorizationException('Forbidden');
       }
+    }
+
+    return $next($request);
+  }
+}
+PHP;
+      } elseif ($isGuestMiddleware) {
+        $template = <<<'PHP'
+<?php
+
+namespace Addon\Middleware;
+
+use App\Core\Interfaces\MiddlewareInterface;
+use App\Services\SessionService;
+use App\Exceptions\AuthorizationException;
+use Closure;
+
+/**
+ * GuestMiddleware
+ *
+ * Middleware standar untuk memastikan pengguna BELUM login.
+ * Biasanya digunakan pada halaman login/register agar user yang sudah login diredirect.
+ *
+ * Contoh penggunaan di router:
+ *
+ *   $router->get('login', [AuthController::class, 'login'], ['guest']);
+ *   $router->get('register', [AuthController::class, 'register'], ['guest']);
+ */
+class {{CLASS_NAME}} implements MiddlewareInterface
+{
+  public function __construct(private SessionService $session) {}
+
+  public function handle($request, Closure $next, array $params = [])
+  {
+    // Cek key session yang sama dengan AuthMiddleware
+    if ($this->session->get('logged_in') === true) {
+       // Lempar exception yang akan ditangkap oleh Handler untuk redirect ke dashboard/home
+       // Pesan 'RedirectIfAuthenticated' adalah sinyal khusus untuk Exception Handler
+       throw new AuthorizationException('RedirectIfAuthenticated');
     }
 
     return $next($request);
