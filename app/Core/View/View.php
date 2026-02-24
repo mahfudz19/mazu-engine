@@ -166,7 +166,13 @@ class View implements RenderableInterface
     ];
 
     $html = '';
-    $html .= '<script>window.mazuConfig = ' . json_encode(['spa' => $spaConfig, 'auth' => $authPublic]) . ';</script>' . PHP_EOL;
+    // Tambahkan base_url agar SPA tahu root path aplikasi (penting untuk subfolder deployment)
+    $appConfig = [
+      'spa' => $spaConfig,
+      'auth' => $authPublic,
+      'base_url' => getBaseUrl()
+    ];
+    $html .= '<script>window.mazuConfig = ' . json_encode($appConfig) . ';</script>' . PHP_EOL;
     $html .= '<script src="' . asset('js/spa.js') . '"></script>' . PHP_EOL;
     return $html;
   }

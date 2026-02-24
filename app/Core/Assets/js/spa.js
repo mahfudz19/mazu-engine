@@ -604,14 +604,9 @@ function handleNewStyles(styles) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
 
-      // Deteksi Base URL
-      const globalCssLink = document.querySelector(
-        'link[href*="css/global.css"]',
-      );
-      let baseUrl = "";
-      if (globalCssLink) {
-        baseUrl = globalCssLink.href.split("css/global.css")[0];
-      }
+      // Gunakan base_url dari konfigurasi server (jika ada), fallback ke root '/'
+      let baseUrl = window.mazuConfig?.base_url || "/";
+      if (!baseUrl.endsWith("/")) baseUrl += "/";
 
       link.href = `${baseUrl}build/assets/${stylePath}`;
       head.appendChild(link);
