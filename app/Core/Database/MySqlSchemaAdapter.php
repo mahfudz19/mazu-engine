@@ -44,6 +44,11 @@ class MySqlSchemaAdapter implements SchemaAdapterInterface
         $parts[] = 'AUTO_INCREMENT';
       }
 
+      // Support ON UPDATE (khusus timestamp/datetime)
+      if (!empty($def['on_update'])) {
+        $parts[] = "ON UPDATE {$def['on_update']}";
+      }
+
       $columnsSql[] = implode(' ', $parts);
 
       if (!empty($def['primary'])) {
@@ -86,8 +91,9 @@ class MySqlSchemaAdapter implements SchemaAdapterInterface
       case 'mediumtext':
         return 'MEDIUMTEXT';
       case 'datetime':
-      case 'timestamp':
         return 'DATETIME';
+      case 'timestamp':
+        return 'TIMESTAMP';
       case 'date':
         return 'DATE';
       case 'boolean':
@@ -129,6 +135,11 @@ class MySqlSchemaAdapter implements SchemaAdapterInterface
 
     if (is_bool($default)) {
       return 'DEFAULT ' . ($default ? 1 : 0);
+    }
+
+    // Pengecualian untuk ekspresi SQL function
+    if ($default === 'CURRENT_TIMESTAMP') {
+      return "DEFAULT CURRENT_TIMESTAMP";
     }
 
     $escaped = str_replace("'", "''", (string) $default);

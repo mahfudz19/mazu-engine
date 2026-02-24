@@ -38,15 +38,18 @@ class ModelSchemaMigrator
 
       if (!isset($schema[$created])) {
         $schema[$created] = [
-          'type' => 'datetime',
+          'type' => 'timestamp',
           'nullable' => false,
+          'default' => 'CURRENT_TIMESTAMP',
         ];
       }
 
       if (!isset($schema[$updated])) {
         $schema[$updated] = [
-          'type' => 'datetime',
+          'type' => 'timestamp',
           'nullable' => false,
+          'default' => 'CURRENT_TIMESTAMP',
+          'on_update' => 'CURRENT_TIMESTAMP', // Fitur baru di adapter
         ];
       }
     }
