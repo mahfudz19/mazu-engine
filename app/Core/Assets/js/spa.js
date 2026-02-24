@@ -67,11 +67,9 @@ function initSpaNavigation() {
       shouldScroll = false;
     }
 
-    const method = link.getAttribute("data-spa-method")?.toUpperCase() || "GET";
-
     const options = {
       scroll: shouldScroll,
-      method: method,
+      method: "GET",
     };
     navigateTo(url, options);
   });
@@ -84,11 +82,7 @@ function initSpaNavigation() {
     e.preventDefault();
 
     const action = form.getAttribute("action") || window.location.href;
-    const methodAttr =
-      form.getAttribute("data-spa-method") ||
-      form.getAttribute("method") ||
-      "GET";
-    const method = methodAttr.toUpperCase();
+    const method = (form.getAttribute("method") || "GET").toUpperCase();
 
     const formData = new FormData(form);
 
@@ -782,9 +776,7 @@ class SpaPrefetcher {
     const currentUrl = new URL(window.location.href);
 
     document
-      .querySelectorAll(
-        "a[data-spa]:not([data-spa-method='POST']):not([data-spa-method='post']):not([data-prefetched])",
-      )
+      .querySelectorAll("a[data-spa]:not([data-prefetched])")
       .forEach((link) => {
         const url = link.href;
 
