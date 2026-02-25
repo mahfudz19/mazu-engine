@@ -152,9 +152,8 @@ class Application
     } catch (RenderableInterface $e) {
       $response = $e->render($this->container);
     } catch (\Throwable $e) {
-
       $code = 500;
-      $message = 'Terjadi kesalahan internal pada server.';
+      $message = $e->getMessage() ?? 'Terjadi kesalahan internal pada server.';
 
       // Deteksi error tabel database tidak ditemukan
       if (strpos($e->getMessage(), 'Base table or view not found') !== false) {
