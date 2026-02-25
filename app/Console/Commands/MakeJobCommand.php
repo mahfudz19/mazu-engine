@@ -35,8 +35,16 @@ class MakeJobCommand implements CommandInterface
       $name .= 'Job';
     }
 
-    $root = __DIR__ . '/../../..';
-    $path = $root . "/addon/Jobs/{$name}.php";
+    // Pastikan folder addon/Jobs ada
+    $jobsDir = __DIR__ . '/../../../addon/Jobs';
+    if (!is_dir($jobsDir)) {
+      if (!mkdir($jobsDir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder addon/Jobs\n", "red");
+        return 1;
+      }
+    }
+
+    $path = $jobsDir . "/{$name}.php";
 
     if (file_exists($path)) {
       echo color("Error: Job sudah ada!\n", "red");
@@ -50,21 +58,42 @@ declare(strict_types=1);
 
 namespace Addon\Jobs;
 
+use App\Core\Foundation\Application;
+
 class {{CLASS_NAME}}
 {
+  public function __construct(
+    private Application $app,
+  ) {}
+
   /**
    * Execute the job.
    */
   public function handle(array $data = []): void
   {
     // Job logic here
+    // TODO: Implement your job logic
+    echo "Job {{CLASS_NAME}} is running with data: " . json_encode($data) . "\n";
   }
 }
-
 PHP;
+
     $content = str_replace('{{CLASS_NAME}}', $name, $template);
 
-    file_put_contents($path, $content);
+    // Pastikan folder ada sebelum file_put_contents
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+      if (!mkdir($dir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder untuk job\n", "red");
+        return 1;
+      }
+    }
+
+    if (file_put_contents($path, $content) === false) {
+      echo color("Error: Gagal membuat file job\n", "red");
+      return 1;
+    }
+
     echo color("SUCCESS:", "green") . " Job dibuat di " . color($path, "blue") . "\n";
 
     return 0;

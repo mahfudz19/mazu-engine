@@ -34,12 +34,12 @@ class ConsoleKernel
     $this->add(new MakeControllerCommand($this->app));
     $this->add(new MakeModelCommand($this->app));
     $this->add(new MakeMiddlewareCommand($this->app));
+    $this->add(new MakeJobCommand($this->app));
     $this->add(new MigrateCommand($this->app));
     $this->add(new RouteCacheCommand($this->app));
     $this->add(new BuildCommand($this->app));
     $this->add(new ServeCommand($this->app));
     $this->add(new QueueWorkCommand($this->app));
-    $this->add(new MakeJobCommand($this->app));
     $this->add(new AboutCommand($this->app));
     $this->add(new GoogleAuthSetupCommand($this->app));
   }

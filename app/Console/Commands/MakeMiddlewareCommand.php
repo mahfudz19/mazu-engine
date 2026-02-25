@@ -33,8 +33,16 @@ class MakeMiddlewareCommand implements CommandInterface
       $name .= 'Middleware';
     }
 
-    $root = __DIR__ . '/../../..';
-    $path = $root . "/addon/Middleware/{$name}.php";
+    // Pastikan folder addon/Middleware ada
+    $middlewareDir = __DIR__ . '/../../../addon/Middleware';
+    if (!is_dir($middlewareDir)) {
+      if (!mkdir($middlewareDir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder addon/Middleware\n", "red");
+        return 1;
+      }
+    }
+
+    $path = $middlewareDir . "/{$name}.php";
 
     if (file_exists($path)) {
       echo color("Error: Middleware sudah ada!\n", "red");
@@ -433,7 +441,20 @@ PHP;
 
     $content = str_replace('{{CLASS_NAME}}', $name, $template);
 
-    file_put_contents($path, $content);
+    // Pastikan folder ada sebelum file_put_contents
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+      if (!mkdir($dir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder untuk middleware\n", "red");
+        return 1;
+      }
+    }
+
+    if (file_put_contents($path, $content) === false) {
+      echo color("Error: Gagal membuat file middleware\n", "red");
+      return 1;
+    }
+
     echo color("SUCCESS:", "green") . " Middleware dibuat di " . color($path, "blue") . "\n";
 
     return 0;

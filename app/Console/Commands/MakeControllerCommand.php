@@ -35,7 +35,16 @@ class MakeControllerCommand implements CommandInterface
       $name .= 'Controller';
     }
 
-    $path = __DIR__ . '/../../..' . "/addon/Controllers/{$name}.php";
+    // Pastikan folder addon/Controllers ada
+    $controllersDir = __DIR__ . '/../../../addon/Controllers';
+    if (!is_dir($controllersDir)) {
+      if (!mkdir($controllersDir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder addon/Controllers\n", "red");
+        return 1;
+      }
+    }
+
+    $path = $controllersDir . "/{$name}.php";
 
     if (file_exists($path)) {
       echo color("Error: Controller sudah ada!\n", "red");
@@ -151,7 +160,20 @@ PHP;
       );
     }
 
-    file_put_contents($path, $content);
+    // Pastikan folder ada sebelum file_put_contents
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+      if (!mkdir($dir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder untuk controller\n", "red");
+        return 1;
+      }
+    }
+
+    if (file_put_contents($path, $content) === false) {
+      echo color("Error: Gagal membuat file controller\n", "red");
+      return 1;
+    }
+
     echo color("SUCCESS:", "green") . " Controller dibuat di " . color($path, "blue") . "\n";
 
     return 0;

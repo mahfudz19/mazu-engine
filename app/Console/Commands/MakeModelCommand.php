@@ -41,8 +41,16 @@ class MakeModelCommand implements CommandInterface
       $name .= 'Model';
     }
 
-    $root = __DIR__ . '/../../..';
-    $path = $root . "/addon/Models/{$name}.php";
+    // Pastikan folder addon/Models ada
+    $modelsDir = __DIR__ . '/../../../addon/Models';
+    if (!is_dir($modelsDir)) {
+      if (!mkdir($modelsDir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder addon/Models\n", "red");
+        return 1;
+      }
+    }
+
+    $path = $modelsDir . "/{$name}.php";
 
     if (file_exists($path)) {
       echo color("Error: Model sudah ada!\n", "red");
@@ -143,7 +151,20 @@ PHP;
       $template
     );
 
-    file_put_contents($path, $content);
+    // Pastikan folder ada sebelum file_put_contents
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+      if (!mkdir($dir, 0755, true)) {
+        echo color("Error: Tidak dapat membuat folder untuk model\n", "red");
+        return 1;
+      }
+    }
+
+    if (file_put_contents($path, $content) === false) {
+      echo color("Error: Gagal membuat file model\n", "red");
+      return 1;
+    }
+
     echo color("SUCCESS:", "green") . " Model dibuat di " . color($path, "blue") . "\n";
 
     return 0;
