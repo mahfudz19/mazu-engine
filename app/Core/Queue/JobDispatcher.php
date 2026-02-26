@@ -4,6 +4,7 @@ namespace App\Core\Queue;
 
 use App\Core\Database\DatabaseManager;
 use App\Core\Queue\RedisQueue;
+use App\Core\Queue\DatabaseQueue;
 use App\Core\Queue\QueueInterface;
 use App\Services\ConfigService;
 use InvalidArgumentException;
@@ -19,6 +20,13 @@ class JobDispatcher
 
     if ($driver === 'redis') {
       $this->queue = new RedisQueue($db, $connection);
+      return;
+    }
+
+    if ($driver === 'database') {
+      $table = $config->get('queue.table', 'queues');
+      // Database driver requires a PDO Database connection
+      $this->queue = new DatabaseQueue($db->connection($connection), $table);
       return;
     }
 

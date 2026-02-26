@@ -11,9 +11,8 @@ class MakeModelCommand implements CommandInterface
 {
   private Inflector $inflector;
 
-  public function __construct(
-    private Application $app,
-  ) {
+  public function __construct()
+  {
     $this->inflector = InflectorFactory::create()->build();
   }
 
@@ -57,99 +56,17 @@ class MakeModelCommand implements CommandInterface
       return 1;
     }
 
-    $baseName = str_replace('Model', '', $name);
-    $tableName = $this->pluralize(strtolower($baseName));
+    // SPECIAL TEMPLATES
+    $baseName = str_replace(['Model', 'model'], '', $name);
+    $template = $this->getSpecialTemplate($baseName, $name);
 
-    $template = <<<'PHP'
-<?php
-
-namespace Addon\Models;
-
-use App\Core\Database\Model;
-
-class {{CLASS_NAME}} extends Model
-{
-    protected ?string $connection = null; // Nama koneksi database (opsional)
-    protected string $table = '{{TABLE_NAME}}';
-    protected bool $timestamps = true;
-
-    // Kolom timestamp (opsional untuk diubah)
-    // protected string $createdAtColumn = 'created_at';
-    // protected string $updatedAtColumn = 'updated_at';
-
-    /**
-     * Schema untuk 'php mazu migrate'
-     * Tipe: id|string|int|bigint|text|datetime|date|boolean|json|decimal
-     */
-    protected array $schema = [
-        // 'id'   => ['type' => 'id', 'primary' => true],
-        // 'name' => ['type' => 'string', 'nullable' => false],
-    ];
-
-    protected array $seed = []; // Data awal untuk seeder
-
-    public function all(): array
-    {
-        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table}");
-        $stmt->execute();
-        return $stmt->fetchAll();
+    if ($template === null) {
+      // Default template untuk model biasa
+      $tableName = $this->pluralize(strtolower($baseName));
+      $template = $this->getDefaultTemplate($name, $tableName);
     }
 
-    public function find(string|int $id): ?array
-    {
-        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} WHERE id = :id LIMIT 1");
-        $stmt->execute(['id' => $id]);
-        $row = $stmt->fetch();
-
-        return $row === false ? null : $row;
-    }
-
-    public function create(array $data): bool
-    {
-        if (empty($data)) {
-            return false;
-        }
-
-        $columns = array_keys($data);
-        $placeholders = array_map(fn($col) => ':' . $col, $columns);
-
-        $sql = "INSERT INTO {$this->table} (" . implode(', ', $columns) . ")
-                VALUES (" . implode(', ', $placeholders) . ")";
-
-        return $this->getDb()->query($sql, $data);
-    }
-
-    public function updateById(string|int $id, array $data): bool
-    {
-        if (empty($data)) {
-            return false;
-        }
-
-        $setParts = [];
-        foreach ($data as $column => $value) {
-            $setParts[] = "{$column} = :{$column}";
-        }
-
-        $sql = "UPDATE {$this->table} SET " . implode(', ', $setParts) . " WHERE id = :id";
-        $data['id'] = $id;
-
-        return $this->getDb()->query($sql, $data);
-    }
-
-    public function deleteById(string|int $id): bool
-    {
-        $sql = "DELETE FROM {$this->table} WHERE id = :id";
-        return $this->getDb()->query($sql, ['id' => $id]);
-    }
-}
-
-PHP;
-
-    $content = str_replace(
-      ['{{CLASS_NAME}}', '{{TABLE_NAME}}'],
-      [$name, $tableName],
-      $template
-    );
+    $content = $template;
 
     // Pastikan folder ada sebelum file_put_contents
     $dir = dirname($path);
@@ -168,6 +85,340 @@ PHP;
     echo color("SUCCESS:", "green") . " Model dibuat di " . color($path, "blue") . "\n";
 
     return 0;
+  }
+
+  private function getSpecialTemplate(string $baseName, string $name): ?string
+  {
+    $specialTemplates = [
+      'Queue' => $this->getQueueModelTemplate($name),
+      'User' => $this->getUserModelTemplate($name),
+    ];
+
+    $template = $specialTemplates[$baseName] ?? null;
+
+    if ($template !== null) {
+      // Lakukan placeholder replacement untuk special templates
+      return str_replace('{{CLASS_NAME}}', $name, $template);
+    }
+
+    return null;
+  }
+
+  private function getQueueModelTemplate(string $name): string
+  {
+    return <<<'PHP'
+<?php
+
+namespace Addon\Models;
+
+use App\Core\Database\Model;
+
+class {{CLASS_NAME}} extends Model
+{
+    protected ?string $connection = null;
+    protected string $table = 'queues';
+    protected bool $timestamps = true;
+
+    protected array $schema = [
+        'id' => ['type' => 'id', 'primary' => true, 'auto_increment' => true],
+        'queue' => ['type' => 'string', 'nullable' => false, 'default' => 'default'],
+        'payload' => ['type' => 'longtext', 'nullable' => false],
+        'attempts' => ['type' => 'int', 'nullable' => false, 'default' => 0],
+        'reserved_at' => ['type' => 'bigint', 'nullable' => true],
+        'available_at' => ['type' => 'bigint', 'nullable' => false],
+        'created_at' => ['type' => 'bigint', 'nullable' => false],
+    ];
+
+    protected array $seed = [];
+
+    public function getPendingJobsCount(string $queue = 'default'): int
+    {
+        $stmt = $this->getDb()->prepare(
+            "SELECT COUNT(*) FROM {$this->table} 
+             WHERE queue = :queue AND reserved_at IS NULL AND available_at <= :now"
+        );
+        $stmt->execute(['queue' => $queue, 'now' => time()]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public function getFailedJobs(): array
+    {
+        $stmt = $this->getDb()->prepare(
+            "SELECT * FROM {$this->table} 
+             WHERE attempts >= 3 ORDER BY created_at DESC"
+        );
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function getQueueStats(): array
+    {
+        $sql = "
+            SELECT 
+                queue,
+                COUNT(*) as total,
+                SUM(CASE WHEN reserved_at IS NULL THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN reserved_at IS NOT NULL THEN 1 ELSE 0 END) as processing,
+                SUM(CASE WHEN attempts >= 3 THEN 1 ELSE 0 END) as failed
+            FROM {$this->table} 
+            GROUP BY queue
+        ";
+        
+        $stmt = $this->getDb()->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    // Basic CRUD methods
+    public function all(): array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function find(string|int $id): ?array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} WHERE id = :id LIMIT 1");
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return $row === false ? null : $row;
+    }
+
+    public function create(array $data): bool
+    {
+        if (empty($data)) return false;
+        
+        $columns = array_keys($data);
+        $placeholders = array_map(fn($col) => ':' . $col, $columns);
+        
+        $sql = "INSERT INTO {$this->table} (" . implode(', ', $columns) . ")
+                VALUES (" . implode(', ', $placeholders) . ")";
+        
+        return $this->getDb()->query($sql, $data);
+    }
+
+    public function updateById(string|int $id, array $data): bool
+    {
+        if (empty($data)) return false;
+        
+        $setParts = [];
+        foreach ($data as $column => $value) {
+            $setParts[] = "{$column} = :{$column}";
+        }
+        
+        $sql = "UPDATE {$this->table} SET " . implode(', ', $setParts) . " WHERE id = :id";
+        $data['id'] = $id;
+        
+        return $this->getDb()->query($sql, $data);
+    }
+
+    public function deleteById(string|int $id): bool
+    {
+        $sql = "DELETE FROM {$this->table} WHERE id = :id";
+        return $this->getDb()->query($sql, ['id' => $id]);
+    }
+}
+PHP;
+  }
+
+  private function getUserModelTemplate(string $name): string
+  {
+    return <<<'PHP'
+<?php
+
+namespace Addon\Models;
+
+use App\Core\Database\Model;
+
+class {{CLASS_NAME}} extends Model
+{
+    protected ?string $connection = null;
+    protected string $table = 'users';
+    protected bool $timestamps = true;
+
+    protected array $schema = [
+        'id' => ['type' => 'id', 'primary' => true, 'auto_increment' => true],
+        'email' => ['type' => 'string', 'nullable' => false, 'unique' => true],
+        'name' => ['type' => 'string', 'nullable' => false],
+        'avatar' => ['type' => 'string', 'nullable' => true],
+        'google_id' => ['type' => 'string', 'nullable' => true, 'unique' => true],
+        'role' => ['type' => 'enum', 'values' => ['user', 'admin', 'super_admin'], 'default' => 'user'],
+        'is_active' => ['type' => 'boolean', 'default' => true],
+        'last_login_at' => ['type' => 'datetime', 'nullable' => true],
+        'created_at' => ['type' => 'datetime', 'nullable' => false],
+        'updated_at' => ['type' => 'datetime', 'nullable' => false],
+    ];
+
+    protected array $seed = [];
+
+    public function findByEmail(string $email): ?array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} WHERE email = :email LIMIT 1");
+        $stmt->execute(['email' => $email]);
+        $row = $stmt->fetch();
+        return $row === false ? null : $row;
+    }
+
+    public function findByGoogleId(string $googleId): ?array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} WHERE google_id = :google_id LIMIT 1");
+        $stmt->execute(['google_id' => $googleId]);
+        $row = $stmt->fetch();
+        return $row === false ? null : $row;
+    }
+
+    public function touchLogin(int $id, ?string $name = null, ?string $avatar = null, ?string $googleId = null): bool
+    {
+        $data = ['last_login_at' => date('Y-m-d H:i:s')];
+        
+        if ($name) $data['name'] = $name;
+        if ($avatar) $data['avatar'] = $avatar;
+        if ($googleId) $data['google_id'] = $googleId;
+        
+        return $this->updateById($id, $data);
+    }
+
+    public function createFromGoogle(array $userData): bool
+    {
+        return $this->create([
+            'email' => $userData['email'],
+            'name' => $userData['name'] ?? null,
+            'avatar' => $userData['avatar'] ?? null,
+            'google_id' => $userData['google_id'] ?? null,
+            'role' => 'user',
+            'is_active' => true,
+        ]);
+    }
+
+    // Standard CRUD methods...
+    public function all(): array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} ORDER BY created_at DESC");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function find(string|int $id): ?array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} WHERE id = :id LIMIT 1");
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return $row === false ? null : $row;
+    }
+
+    public function create(array $data): bool
+    {
+        if (empty($data)) return false;
+        
+        $columns = array_keys($data);
+        $placeholders = array_map(fn($col) => ':' . $col, $columns);
+        
+        $sql = "INSERT INTO {$this->table} (" . implode(', ', $columns) . ")
+                VALUES (" . implode(', ', $placeholders) . ")";
+        
+        return $this->getDb()->query($sql, $data);
+    }
+
+    public function updateById(string|int $id, array $data): bool
+    {
+        if (empty($data)) return false;
+        
+        $setParts = [];
+        foreach ($data as $column => $value) {
+            $setParts[] = "{$column} = :{$column}";
+        }
+        
+        $sql = "UPDATE {$this->table} SET " . implode(', ', $setParts) . " WHERE id = :id";
+        $data['id'] = $id;
+        
+        return $this->getDb()->query($sql, $data);
+    }
+
+    public function deleteById(string|int $id): bool
+    {
+        $sql = "DELETE FROM {$this->table} WHERE id = :id";
+        return $this->getDb()->query($sql, ['id' => $id]);
+    }
+}
+PHP;
+  }
+
+  private function getDefaultTemplate(string $name, string $tableName): string
+  {
+    // Template default yang sudah ada
+    $template = <<<'PHP'
+<?php
+
+namespace Addon\Models;
+
+use App\Core\Database\Model;
+
+class {{CLASS_NAME}} extends Model
+{
+    protected ?string $connection = null;
+    protected string $table = '{{TABLE_NAME}}';
+    protected bool $timestamps = true;
+
+    protected array $schema = [
+        // 'id'   => ['type' => 'id', 'primary' => true],
+        // 'name' => ['type' => 'string', 'nullable' => false],
+    ];
+
+    protected array $seed = [];
+
+    public function all(): array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table}");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function find(string|int $id): ?array
+    {
+        $stmt = $this->getDb()->prepare("SELECT * FROM {$this->table} WHERE id = :id LIMIT 1");
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return $row === false ? null : $row;
+    }
+
+    public function create(array $data): bool
+    {
+        if (empty($data)) return false;
+        
+        $columns = array_keys($data);
+        $placeholders = array_map(fn($col) => ':' . $col, $columns);
+        
+        $sql = "INSERT INTO {$this->table} (" . implode(', ', $columns) . ")
+                VALUES (" . implode(', ', $placeholders) . ")";
+        
+        return $this->getDb()->query($sql, $data);
+    }
+
+    public function updateById(string|int $id, array $data): bool
+    {
+        if (empty($data)) return false;
+        
+        $setParts = [];
+        foreach ($data as $column => $value) {
+            $setParts[] = "{$column} = :{$column}";
+        }
+        
+        $sql = "UPDATE {$this->table} SET " . implode(', ', $setParts) . " WHERE id = :id";
+        $data['id'] = $id;
+        
+        return $this->getDb()->query($sql, $data);
+    }
+
+    public function deleteById(string|int $id): bool
+    {
+        $sql = "DELETE FROM {$this->table} WHERE id = :id";
+        return $this->getDb()->query($sql, ['id' => $id]);
+    }
+}
+PHP;
+
+    return str_replace('{{CLASS_NAME}}', $name, $template);
   }
 
   /**

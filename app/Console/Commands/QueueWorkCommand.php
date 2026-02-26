@@ -6,6 +6,7 @@ use App\Core\Foundation\Application;
 use App\Console\Contracts\CommandInterface;
 use App\Core\Database\DatabaseManager;
 use App\Core\Queue\RedisQueue;
+use App\Core\Queue\DatabaseQueue;
 use App\Services\ConfigService;
 use Throwable;
 
@@ -69,11 +70,21 @@ class QueueWorkCommand implements CommandInterface
     /** @var ConfigService $config */
     $config = $container->resolve(ConfigService::class);
 
+    $driver = $config->get('queue.driver', 'redis');
     $connectionName = $config->get('queue.connection', 'redis_queue');
-    $queueDriver = new RedisQueue($dbManager, $connectionName);
+    $tableName = $config->get('queue.table', 'queues');
 
-    // Redis for status updates
-    $redis = $dbManager->connection($connectionName);
+    if ($driver === 'redis') {
+      $queueDriver = new RedisQueue($dbManager, $connectionName);
+      $redis = $dbManager->connection($connectionName);
+    } elseif ($driver === 'database') {
+      $dbConnection = $dbManager->connection($connectionName);
+      $queueDriver = new DatabaseQueue($dbConnection, $tableName);
+      // We'll use the DB connection for worker status too
+      $redis = null;
+    } else {
+      throw new \RuntimeException("Queue driver [{$driver}] not supported.");
+    }
 
     $workerId = gethostname() . ':' . getmypid();
     $workerKey = "worker_status:{$queueName}:{$workerId}";
@@ -83,13 +94,15 @@ class QueueWorkCommand implements CommandInterface
 
     while (true) {
       // Heartbeat
-      $redis->hmset($workerKey, [
-        'status' => 'running',
-        'queue' => $queueName,
-        'worker_id' => $workerId,
-        'last_seen_at' => date('Y-m-d H:i:s'),
-      ]);
-      $redis->expire($workerKey, 300);
+      if ($redis) {
+        $redis->hmset($workerKey, [
+          'status' => 'running',
+          'queue' => $queueName,
+          'worker_id' => $workerId,
+          'last_seen_at' => date('Y-m-d H:i:s'),
+        ]);
+        $redis->expire($workerKey, 300);
+      }
 
       if ($this->shouldQuit) {
         $this->log("Shutdown signal received. Exiting...", $logFileName);
@@ -116,6 +129,12 @@ class QueueWorkCommand implements CommandInterface
 
       if ($payload) {
         $this->processJob($payload, $container, $logFileName);
+
+        // After success, if it's database queue, we need to delete the job
+        if ($driver === 'database' && isset($payload['id'])) {
+          $queueDriver->delete((int) $payload['id']);
+        }
+
         $jobsProcessed++;
       } else {
         // If cron mode (non-blocking) and no job, exit

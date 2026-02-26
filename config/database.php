@@ -1,4 +1,9 @@
 <?php
+// Helper untuk deteksi socket MAMP secara otomatis jika tidak diset di ENV
+$defaultSocket = null;
+if (file_exists('/Applications/MAMP/tmp/mysql/mysql.sock')) {
+  $defaultSocket = '/Applications/MAMP/tmp/mysql/mysql.sock';
+}
 
 return [
   'default' => 'mysql',
@@ -10,7 +15,7 @@ return [
       'database' => env('DB_NAME', 'campus_agenda'),
       'username' => env('DB_USER', 'root'),
       'password' => env('DB_PASS', 'root'),
-      'unix_socket' => env('DB_SOCKET', $isDev ? '/Applications/MAMP/tmp/mysql/mysql.sock' : null),
+      'unix_socket' => env('DB_SOCKET', $defaultSocket),
       'charset' => 'utf8mb4',
       'options' => [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
