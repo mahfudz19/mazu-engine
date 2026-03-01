@@ -128,13 +128,7 @@ class QueueWorkCommand implements CommandInterface
       }
 
       if ($payload) {
-        $this->processJob($payload, $container, $logFileName);
-
-        // After success, if it's database queue, we need to delete the job
-        if ($driver === 'database' && isset($payload['id'])) {
-          $queueDriver->delete((int) $payload['id']);
-        }
-
+        $this->processJob($payload, $container, $logFileName, $queueDriver);
         $jobsProcessed++;
       } else {
         // If cron mode (non-blocking) and no job, exit
@@ -156,27 +150,44 @@ class QueueWorkCommand implements CommandInterface
     return 0;
   }
 
-  private function processJob(array $payload, $container, string $logFileName): void
+  private function processJob(array $payload, $container, string $logFileName, $queueDriver): void
   {
     $jobClass = $payload['job_class'];
     $data = $payload['data'];
+    $jobId = $payload['id'] ?? null;
 
     $this->log("Processing job: {$jobClass}...", $logFileName);
 
     try {
       if (class_exists($jobClass)) {
         $jobInstance = $container->resolve($jobClass);
+
+        // Set job ID jika job memiliki method setJobId
+        if ($jobId && method_exists($jobInstance, 'setJobId')) {
+          $jobInstance->setJobId($jobId);
+        }
+
         if (method_exists($jobInstance, 'handle')) {
           $jobInstance->handle($data);
+
+          if ($jobId) {
+            $queueDriver->success((int) $jobId);
+          }
+
           $this->log("Job processed successfully: {$jobClass}", $logFileName);
         } else {
-          $this->log("ERROR: Method 'handle' not found in {$jobClass}", $logFileName);
+          throw new \RuntimeException("Method 'handle' not found in {$jobClass}");
         }
       } else {
-        $this->log("ERROR: Job class not found: {$jobClass}", $logFileName);
+        throw new \RuntimeException("Job class not found: {$jobClass}");
       }
     } catch (Throwable $e) {
-      $this->log("ERROR PROCESSING JOB {$jobClass}: " . $e->getMessage(), $logFileName);
+      $errorMessage = $e->getMessage();
+      $this->log("ERROR PROCESSING JOB {$jobClass}: " . $errorMessage, $logFileName);
+
+      if ($jobId) {
+        $queueDriver->fail((int) $jobId, $errorMessage);
+      }
     }
   }
 

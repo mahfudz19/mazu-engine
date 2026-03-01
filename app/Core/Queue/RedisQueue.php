@@ -46,4 +46,16 @@ class RedisQueue implements QueueInterface
 
     return null;
   }
+
+  public function fail(int $id, string $message): bool
+  {
+    // For Redis, we might log it or move to a failed list
+    // For now, satisfy the interface
+    return true;
+  }
+
+  public function success(int $id): bool
+  {
+    return true;
+  }
 }

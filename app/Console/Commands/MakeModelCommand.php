@@ -9,104 +9,104 @@ use Doctrine\Inflector\InflectorFactory;
 
 class MakeModelCommand implements CommandInterface
 {
-  private Inflector $inflector;
+    private Inflector $inflector;
 
-  public function __construct()
-  {
-    $this->inflector = InflectorFactory::create()->build();
-  }
-
-  public function getName(): string
-  {
-    return 'make:model';
-  }
-
-  public function getDescription(): string
-  {
-    return 'Membuat model baru di addon/Models';
-  }
-
-  public function handle(array $arguments): int
-  {
-    $name = $arguments[0] ?? null;
-    if (!$name) {
-      echo color("Error: Nama model harus diisi.\n", "red");
-      return 1;
+    public function __construct()
+    {
+        $this->inflector = InflectorFactory::create()->build();
     }
 
-    $name = ucfirst($name);
-
-    if (!str_ends_with($name, 'Model')) {
-      $name .= 'Model';
+    public function getName(): string
+    {
+        return 'make:model';
     }
 
-    // Pastikan folder addon/Models ada
-    $modelsDir = __DIR__ . '/../../../addon/Models';
-    if (!is_dir($modelsDir)) {
-      if (!mkdir($modelsDir, 0755, true)) {
-        echo color("Error: Tidak dapat membuat folder addon/Models\n", "red");
-        return 1;
-      }
+    public function getDescription(): string
+    {
+        return 'Membuat model baru di addon/Models';
     }
 
-    $path = $modelsDir . "/{$name}.php";
+    public function handle(array $arguments): int
+    {
+        $name = $arguments[0] ?? null;
+        if (!$name) {
+            echo color("Error: Nama model harus diisi.\n", "red");
+            return 1;
+        }
 
-    if (file_exists($path)) {
-      echo color("Error: Model sudah ada!\n", "red");
-      return 1;
+        $name = ucfirst($name);
+
+        if (!str_ends_with($name, 'Model')) {
+            $name .= 'Model';
+        }
+
+        // Pastikan folder addon/Models ada
+        $modelsDir = __DIR__ . '/../../../addon/Models';
+        if (!is_dir($modelsDir)) {
+            if (!mkdir($modelsDir, 0755, true)) {
+                echo color("Error: Tidak dapat membuat folder addon/Models\n", "red");
+                return 1;
+            }
+        }
+
+        $path = $modelsDir . "/{$name}.php";
+
+        if (file_exists($path)) {
+            echo color("Error: Model sudah ada!\n", "red");
+            return 1;
+        }
+
+        // SPECIAL TEMPLATES
+        $baseName = str_replace(['Model', 'model'], '', $name);
+        $template = $this->getSpecialTemplate($baseName, $name);
+
+        if ($template === null) {
+            // Default template untuk model biasa
+            $tableName = $this->pluralize(strtolower($baseName));
+            $template = $this->getDefaultTemplate($name, $tableName);
+        }
+
+        $content = $template;
+
+        // Pastikan folder ada sebelum file_put_contents
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
+            if (!mkdir($dir, 0755, true)) {
+                echo color("Error: Tidak dapat membuat folder untuk model\n", "red");
+                return 1;
+            }
+        }
+
+        if (file_put_contents($path, $content) === false) {
+            echo color("Error: Gagal membuat file model\n", "red");
+            return 1;
+        }
+
+        echo color("SUCCESS:", "green") . " Model dibuat di " . color($path, "blue") . "\n";
+
+        return 0;
     }
 
-    // SPECIAL TEMPLATES
-    $baseName = str_replace(['Model', 'model'], '', $name);
-    $template = $this->getSpecialTemplate($baseName, $name);
+    private function getSpecialTemplate(string $baseName, string $name): ?string
+    {
+        $specialTemplates = [
+            'Queue' => $this->getQueueModelTemplate($name),
+            'User' => $this->getUserModelTemplate($name),
+        ];
 
-    if ($template === null) {
-      // Default template untuk model biasa
-      $tableName = $this->pluralize(strtolower($baseName));
-      $template = $this->getDefaultTemplate($name, $tableName);
+        $template = $specialTemplates[$baseName] ?? null;
+
+        if ($template !== null) {
+            // Lakukan placeholder replacement untuk special templates
+            return str_replace('{{CLASS_NAME}}', $name, $template);
+        }
+
+        return null;
     }
 
-    $content = $template;
-
-    // Pastikan folder ada sebelum file_put_contents
-    $dir = dirname($path);
-    if (!is_dir($dir)) {
-      if (!mkdir($dir, 0755, true)) {
-        echo color("Error: Tidak dapat membuat folder untuk model\n", "red");
-        return 1;
-      }
-    }
-
-    if (file_put_contents($path, $content) === false) {
-      echo color("Error: Gagal membuat file model\n", "red");
-      return 1;
-    }
-
-    echo color("SUCCESS:", "green") . " Model dibuat di " . color($path, "blue") . "\n";
-
-    return 0;
-  }
-
-  private function getSpecialTemplate(string $baseName, string $name): ?string
-  {
-    $specialTemplates = [
-      'Queue' => $this->getQueueModelTemplate($name),
-      'User' => $this->getUserModelTemplate($name),
-    ];
-
-    $template = $specialTemplates[$baseName] ?? null;
-
-    if ($template !== null) {
-      // Lakukan placeholder replacement untuk special templates
-      return str_replace('{{CLASS_NAME}}', $name, $template);
-    }
-
-    return null;
-  }
-
-  private function getQueueModelTemplate(string $name): string
-  {
-    return <<<'PHP'
+    private function getQueueModelTemplate(string $name): string
+    {
+        return <<<'PHP'
 <?php
 
 namespace Addon\Models;
@@ -120,14 +120,28 @@ class {{CLASS_NAME}} extends Model
     protected bool $timestamps = true;
 
     protected array $schema = [
+        // Field wajib untuk queue system - TIDAK BOLEH DIHAPUS
         'id' => ['type' => 'id', 'primary' => true, 'auto_increment' => true],
         'queue' => ['type' => 'string', 'nullable' => false, 'default' => 'default'],
         'payload' => ['type' => 'longtext', 'nullable' => false],
         'attempts' => ['type' => 'int', 'nullable' => false, 'default' => 0],
         'reserved_at' => ['type' => 'bigint', 'nullable' => true],
         'available_at' => ['type' => 'bigint', 'nullable' => false],
-        'created_at' => ['type' => 'bigint', 'nullable' => false],
+
+        // Field opsional untuk progress tracking - BOLEH DIHAPUS jika tidak perlu
+        'status' => ['type' => 'enum', 'values' => ['pending', 'processing', 'success', 'failed'], 'nullable' => false, 'default' => 'pending'],
+        'progress' => ['type' => 'int', 'nullable' => false, 'default' => 0],
+        'current_step' => ['type' => 'string', 'nullable' => true],
+        'error_message' => ['type' => 'text', 'nullable' => true],
+        'completed_at' => ['type' => 'bigint', 'nullable' => true],
+
+        // Tambahkan custom fields untuk project Anda di sini
+        // Contoh:
+        // 'priority' => ['type' => 'enum', 'values' => ['low', 'medium', 'high'], 'default' => 'medium'],
+        // 'retry_count' => ['type' => 'int', 'default' => 0],
+        // 'duration' => ['type' => 'bigint', 'nullable' => true],
     ];
+
 
     protected array $seed = [];
 
@@ -220,11 +234,11 @@ class {{CLASS_NAME}} extends Model
     }
 }
 PHP;
-  }
+    }
 
-  private function getUserModelTemplate(string $name): string
-  {
-    return <<<'PHP'
+    private function getUserModelTemplate(string $name): string
+    {
+        return <<<'PHP'
 <?php
 
 namespace Addon\Models;
@@ -342,12 +356,12 @@ class {{CLASS_NAME}} extends Model
     }
 }
 PHP;
-  }
+    }
 
-  private function getDefaultTemplate(string $name, string $tableName): string
-  {
-    // Template default yang sudah ada
-    $template = <<<'PHP'
+    private function getDefaultTemplate(string $name, string $tableName): string
+    {
+        // Template default yang sudah ada
+        $template = <<<'PHP'
 <?php
 
 namespace Addon\Models;
@@ -418,14 +432,14 @@ class {{CLASS_NAME}} extends Model
 }
 PHP;
 
-    return str_replace('{{CLASS_NAME}}', $name, $template);
-  }
+        return str_replace('{{CLASS_NAME}}', $name, $template);
+    }
 
-  /**
-   * Delegate pluralization to Doctrine Inflector (same engine used by Laravel).
-   */
-  private function pluralize(string $singular): string
-  {
-    return strtolower($this->inflector->pluralize($singular));
-  }
+    /**
+     * Delegate pluralization to Doctrine Inflector (same engine used by Laravel).
+     */
+    private function pluralize(string $singular): string
+    {
+        return strtolower($this->inflector->pluralize($singular));
+    }
 }

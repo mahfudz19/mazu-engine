@@ -22,4 +22,14 @@ interface QueueInterface
    * @return array|null [jobClass, data] or null
    */
   public function pop(string $queue = 'default', bool $blocking = true);
+
+  /**
+   * Mark a job as failed.
+   */
+  public function fail(int $id, string $message): bool;
+
+  /**
+   * Mark a job as successful.
+   */
+  public function success(int $id): bool;
 }

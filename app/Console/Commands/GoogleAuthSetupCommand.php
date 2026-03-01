@@ -616,7 +616,7 @@ class AuthMiddleware implements MiddlewareInterface
   public function handle($request, \Closure $next, array $params = [])
   {
     if ($this->session->get('is_logged_in') !== true) {
-      throw new AuthenticationException('Unauthenticated');
+      throw new AuthenticationException('Unauthenticated')->hardRedirect();
     }
 
     return $next($request);
@@ -650,7 +650,7 @@ class RoleMiddleware implements MiddlewareInterface
   public function handle($request, \Closure $next, array $params = [])
   {
     if ($this->session->get('is_logged_in') !== true) {
-      throw new AuthenticationException('Unauthenticated');
+      throw new AuthenticationException('Unauthenticated')->hardRedirect();
     }
 
     $user = $this->session->get('user', []);

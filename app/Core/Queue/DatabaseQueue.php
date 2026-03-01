@@ -16,6 +16,12 @@ class DatabaseQueue implements QueueInterface
     $this->table = $table;
   }
 
+  public function getDb(): Database
+  {
+    return $this->db;
+  }
+
+
   public function push(string $jobClass, array $data = [], string $queue = 'default')
   {
     $payload = json_encode([
@@ -25,15 +31,14 @@ class DatabaseQueue implements QueueInterface
       'dispatched_at' => date('Y-m-d H:i:s')
     ]);
 
-    $sql = "INSERT INTO `{$this->table}` (`queue`, `payload`, `attempts`, `reserved_at`, `available_at`, `created_at`) 
-            VALUES (:queue, :payload, 0, NULL, :available_at, :created_at)";
+    $sql = "INSERT INTO `{$this->table}` (`queue`, `payload`, `attempts`, `reserved_at`, `available_at`, `status`, `progress`) 
+            VALUES (:queue, :payload, 0, NULL, :available_at, 'pending', 0)";
 
     $now = time();
     $params = [
       'queue' => $queue,
       'payload' => $payload,
       'available_at' => $now,
-      'created_at' => $now
     ];
 
     $stmt = $this->db->prepare($sql);
@@ -44,18 +49,18 @@ class DatabaseQueue implements QueueInterface
   {
     // Database queue doesn't truly support blocking in the same way Redis does
     // We'll just do a single check. The worker loop handles the sleep.
-
+    
     $now = time();
     $expiry = $now - 60; // 60 seconds timeout for reserved jobs
 
-    // 1. Find and reserve a job atomically (using a transaction or clever SQL)
-    // We'll use a transaction for safety
+    // 1. Find and reserve a job atomically
     try {
       $this->db->query("START TRANSACTION");
 
-      // Find an available job
+      // Find an available job (Pending or timed out)
       $sql = "SELECT * FROM `{$this->table}` 
               WHERE `queue` = :queue 
+              AND `status` = 'pending'
               AND (`reserved_at` IS NULL OR `reserved_at` <= :expiry)
               AND `available_at` <= :now
               ORDER BY `id` ASC 
@@ -71,19 +76,21 @@ class DatabaseQueue implements QueueInterface
         return null;
       }
 
-      // Reserve it
+      // Reserve it and mark as processing
       $reserveSql = "UPDATE `{$this->table}` 
-                     SET `reserved_at` = :now, `attempts` = `attempts` + 1 
+                     SET `reserved_at` = :now, 
+                         `attempts` = `attempts` + 1,
+                         `status` = 'processing'
                      WHERE `id` = :id";
-
+      
       $reserveStmt = $this->db->prepare($reserveSql);
       $reserveStmt->execute(['now' => $now, 'id' => $job['id']]);
 
       $this->db->query("COMMIT");
 
       $payload = json_decode($job['payload'], true);
-      $payload['id'] = $job['id']; // Store DB ID to delete later
-
+      $payload['id'] = $job['id']; // Store DB ID to handle status later
+      
       return $payload;
     } catch (\Throwable $e) {
       $this->db->query("ROLLBACK");
@@ -92,12 +99,38 @@ class DatabaseQueue implements QueueInterface
   }
 
   /**
-   * Delete a job from the queue after successful execution.
+   * Mark a job as successful and delete it (Best practice for performance).
    */
-  public function delete(int $id): bool
+  public function success(int $id): bool
   {
     $sql = "DELETE FROM `{$this->table}` WHERE `id` = :id";
     $stmt = $this->db->prepare($sql);
     return $stmt->execute(['id' => $id]);
+  }
+
+  /**
+   * Mark a job as failed and keep it for debugging.
+   */
+  public function fail(int $id, string $message): bool
+  {
+    $sql = "UPDATE `{$this->table}` 
+            SET `status` = 'failed', 
+                `error_message` = :message,
+                `reserved_at` = NULL 
+            WHERE `id` = :id";
+    
+    $stmt = $this->db->prepare($sql);
+    return $stmt->execute([
+      'id' => $id,
+      'message' => $message
+    ]);
+  }
+
+  /**
+   * Delete a job from the queue (Legacy support).
+   */
+  public function delete(int $id): bool
+  {
+    return $this->success($id);
   }
 }
