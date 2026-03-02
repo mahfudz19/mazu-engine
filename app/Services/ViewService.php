@@ -193,7 +193,7 @@ class ViewService
           // Karena spa.js akan menambahkan 'build/assets/' di depannya.
           return substr($manifest[$key], 7); // 7 = strlen('assets/')
         }
-        
+
         return $style;
       }, View::getStyles());
 
@@ -224,15 +224,27 @@ class ViewService
       return; // Prioritaskan nama yang sama
     }
 
-    // 2. Jika tidak ada file CSS dengan nama spesifik, cek style.css di folder yang sama
-    // Ini berlaku untuk SEMUA file (index.php, [id].php, detail.php, dll)
+    // 2. Cek style.css di folder yang sama
     $cssPathStyle = dirname($phpFilePath) . '/style.css';
     if (file_exists($cssPathStyle)) {
       $relativePath = ltrim(str_replace($rootViewsPath, '', $cssPathStyle), '/');
       View::addStyle($relativePath);
+    } else {
+      // 3. Auto-discovery: naik ke parent directories untuk mencari style.css
+      $dir = dirname($phpFilePath);
+      while (strpos($dir, $rootViewsPath) === 0) {
+        $dir = dirname($dir);
+        if (!$dir || $dir === '/' || strlen($dir) < strlen($rootViewsPath)) break;
+        $parentStyle = $dir . '/style.css';
+        if (file_exists($parentStyle)) {
+          $relativeParent = ltrim(str_replace($rootViewsPath, '', $parentStyle), '/');
+          View::addStyle($relativeParent);
+          break; // Ambil yang terdekat saja
+        }
+      }
     }
 
-    // 3. Khusus untuk layout/index.php, cek juga sidebar.css (Legacy support)
+    // 4. Legacy support: sidebar.css
     if (basename($phpFilePath) === 'index.php') {
       $cssPathSidebar = dirname($phpFilePath) . '/sidebar.css';
       if (file_exists($cssPathSidebar)) {
@@ -254,16 +266,27 @@ class ViewService
     if (file_exists($jsPathSameName)) {
       $jsPath = $jsPathSameName;
     } else {
-      // 2. Jika tidak ada, cek script.js di folder yang sama
+      // 2. Cek script.js di folder yang sama
       $jsPathScript = dirname($phpFilePath) . '/script.js';
       if (file_exists($jsPathScript)) {
         $jsPath = $jsPathScript;
+      } else {
+        // 3. Auto-discovery: cari script.js di parent directory terdekat
+        $dir = dirname($phpFilePath);
+        while (strpos($dir, $rootViewsPath) === 0) {
+          $dir = dirname($dir);
+          if (!$dir || $dir === '/' || strlen($dir) < strlen($rootViewsPath)) break;
+          $parentScript = $dir . '/script.js';
+          if (file_exists($parentScript)) {
+            $jsPath = $parentScript;
+            break;
+          }
+        }
       }
     }
 
     if ($jsPath) {
       $relativePath = ltrim(str_replace($rootViewsPath, '', $jsPath), '/');
-      // Gunakan helper asset() agar menggunakan versioning (hash)
       $url = asset('assets/' . $relativePath);
       $html .= PHP_EOL . '<script src="' . $url . '"></script>' . PHP_EOL;
     }

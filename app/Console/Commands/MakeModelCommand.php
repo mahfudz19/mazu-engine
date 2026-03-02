@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Core\Foundation\Application;
 use App\Console\Contracts\CommandInterface;
 use Doctrine\Inflector\Inflector;
 use Doctrine\Inflector\InflectorFactory;
@@ -131,8 +130,8 @@ class {{CLASS_NAME}} extends Model
         // Field opsional untuk progress tracking - BOLEH DIHAPUS jika tidak perlu
         'status' => ['type' => 'enum', 'values' => ['pending', 'processing', 'success', 'failed'], 'nullable' => false, 'default' => 'pending'],
         'progress' => ['type' => 'int', 'nullable' => false, 'default' => 0],
-        'current_step' => ['type' => 'string', 'nullable' => true],
-        'error_message' => ['type' => 'text', 'nullable' => true],
+        'current_step' => ['type' => 'longtext', 'nullable' => true],
+        'error_message' => ['type' => 'longtext', 'nullable' => true],
         'completed_at' => ['type' => 'bigint', 'nullable' => true],
 
         // Tambahkan custom fields untuk project Anda di sini
@@ -167,16 +166,14 @@ class {{CLASS_NAME}} extends Model
 
     public function getQueueStats(): array
     {
-        $sql = "
-            SELECT 
-                queue,
-                COUNT(*) as total,
-                SUM(CASE WHEN reserved_at IS NULL THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN reserved_at IS NOT NULL THEN 1 ELSE 0 END) as processing,
-                SUM(CASE WHEN attempts >= 3 THEN 1 ELSE 0 END) as failed
-            FROM {$this->table} 
-            GROUP BY queue
-        ";
+        $sql = "SELECT 
+                    queue,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN reserved_at IS NULL THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN reserved_at IS NOT NULL THEN 1 ELSE 0 END) as processing,
+                    SUM(CASE WHEN attempts >= 3 THEN 1 ELSE 0 END) as failed
+                FROM {$this->table} 
+                GROUP BY queue";
         
         $stmt = $this->getDb()->prepare($sql);
         $stmt->execute();
