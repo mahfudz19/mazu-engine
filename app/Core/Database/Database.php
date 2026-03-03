@@ -98,7 +98,7 @@ class Database
       return $stmt->execute($params);
     } catch (PDOException $e) {
       // anda bisa menambahkan logging di sini jika perlu
-      error_log("Database query failed: " . $e->getMessage());
+      logger()->error("Database query failed: " . $sql . "; error =>" . $e->getMessage(), ['e' => $e]);
       return false;
     }
   }

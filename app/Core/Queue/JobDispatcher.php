@@ -40,7 +40,7 @@ class JobDispatcher
     } catch (\Throwable $e) {
       $payloadJson = json_encode(['job' => $jobClass, 'data' => $data]);
       $message = "[JobDispatcher] ERROR DISPATCHING: Job '{$jobClass}' to queue '{$queue}'. Error: " . $e->getMessage() . ". Payload: " . substr($payloadJson, 0, 200) . "...\nException Trace:\n" . $e->getTraceAsString();
-      error_log($message);
+      logger()->error($message, ['exception' => $e]);
       throw $e;
     }
   }

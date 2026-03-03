@@ -354,7 +354,7 @@ class {{CLASS_NAME}} implements MiddlewareInterface
       throw new AuthenticationException('Unauthenticated');
     }
 
-    // Sesuaikan dengan struktur session user di aplikasi Anda
+    // Sesuaikan dengan struktur session user di aplikasi anda
     // Default: $_SESSION['user'] = ['role' => 'admin', ...]
     // Atau jika disimpan langsung: $_SESSION['role'] = 'admin'
     

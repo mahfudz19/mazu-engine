@@ -167,7 +167,7 @@ class Application
 
       // Deteksi error tabel database tidak ditemukan
       if (strpos($e->getMessage(), 'Base table or view not found') !== false) {
-        $message = 'Terjadi kesalahan Database: Tabel tidak ditemukan. Pastikan Anda sudah menjalankan migrasi database.';
+        $message = 'Terjadi kesalahan Database: Tabel tidak ditemukan. Pastikan anda sudah menjalankan migrasi database.';
 
         // Coba ambil nama tabel yang hilang untuk info lebih detail
         if (preg_match("/Table '(.+?)' doesn't exist/", $e->getMessage(), $matches)) {

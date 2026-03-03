@@ -213,82 +213,78 @@ class ViewService
 
   /**
    * Helper: Mendeteksi keberadaan file CSS pendamping dan mendaftarkannya ke View.
+   * Mendukung penemuan rekursif ke direktori induk (climbing discovery).
    */
   private function detectAndRegisterStyle(string $phpFilePath, string $rootViewsPath): void
   {
+    $foundStyles = [];
+
     // 1. Cek file CSS dengan nama yang sama (misal: header.php -> header.css)
     $cssPathSameName = preg_replace('/\.php$/', '.css', $phpFilePath);
     if (file_exists($cssPathSameName)) {
-      $relativePath = ltrim(str_replace($rootViewsPath, '', $cssPathSameName), '/');
-      View::addStyle($relativePath);
-      return; // Prioritaskan nama yang sama
+      $foundStyles[] = ltrim(str_replace($rootViewsPath, '', $cssPathSameName), '/');
     }
 
-    // 2. Cek style.css di folder yang sama
-    $cssPathStyle = dirname($phpFilePath) . '/style.css';
-    if (file_exists($cssPathStyle)) {
-      $relativePath = ltrim(str_replace($rootViewsPath, '', $cssPathStyle), '/');
-      View::addStyle($relativePath);
-    } else {
-      // 3. Auto-discovery: naik ke parent directories untuk mencari style.css
-      $dir = dirname($phpFilePath);
-      while (strpos($dir, $rootViewsPath) === 0) {
-        $dir = dirname($dir);
-        if (!$dir || $dir === '/' || strlen($dir) < strlen($rootViewsPath)) break;
-        $parentStyle = $dir . '/style.css';
-        if (file_exists($parentStyle)) {
-          $relativeParent = ltrim(str_replace($rootViewsPath, '', $parentStyle), '/');
-          View::addStyle($relativeParent);
-          break; // Ambil yang terdekat saja
-        }
+    // 2. Climbing discovery: Kumpulkan style.css dari folder saat ini hingga ke root views
+    $currentDir = is_dir($phpFilePath) ? $phpFilePath : dirname($phpFilePath);
+    while (strpos($currentDir, $rootViewsPath) === 0) {
+      // Cek style.css
+      $cssPathStyle = $currentDir . '/style.css';
+      if (file_exists($cssPathStyle)) {
+        $foundStyles[] = ltrim(str_replace($rootViewsPath, '', $cssPathStyle), '/');
       }
-    }
 
-    // 4. Legacy support: sidebar.css
-    if (basename($phpFilePath) === 'index.php') {
-      $cssPathSidebar = dirname($phpFilePath) . '/sidebar.css';
+      // Cek sidebar.css (Legacy support)
+      $cssPathSidebar = $currentDir . '/sidebar.css';
       if (file_exists($cssPathSidebar)) {
-        $relativePath = ltrim(str_replace($rootViewsPath, '', $cssPathSidebar), '/');
-        View::addStyle($relativePath);
+        $foundStyles[] = ltrim(str_replace($rootViewsPath, '', $cssPathSidebar), '/');
       }
+
+      if ($currentDir === $rootViewsPath) break;
+      $currentDir = dirname($currentDir);
+    }
+
+    // Daftarkan semua yang ditemukan (urutan terbalik agar parent di-load lebih dulu)
+    foreach (array_reverse(array_unique($foundStyles)) as $style) {
+      View::addStyle($style);
     }
   }
 
   /**
    * Helper: Mendeteksi keberadaan file JS pendamping dan menyuntikkannya ke HTML.
+   * Mendukung penemuan rekursif ke direktori induk (climbing discovery).
    */
   private function detectAndInjectScript(string $phpFilePath, string $rootViewsPath, string &$html): void
   {
-    $jsPath = null;
+    $foundScripts = [];
 
     // 1. Cek file JS dengan nama yang sama (misal: index.php -> index.js)
     $jsPathSameName = preg_replace('/\.php$/', '.js', $phpFilePath);
     if (file_exists($jsPathSameName)) {
-      $jsPath = $jsPathSameName;
-    } else {
-      // 2. Cek script.js di folder yang sama
-      $jsPathScript = dirname($phpFilePath) . '/script.js';
-      if (file_exists($jsPathScript)) {
-        $jsPath = $jsPathScript;
-      } else {
-        // 3. Auto-discovery: cari script.js di parent directory terdekat
-        $dir = dirname($phpFilePath);
-        while (strpos($dir, $rootViewsPath) === 0) {
-          $dir = dirname($dir);
-          if (!$dir || $dir === '/' || strlen($dir) < strlen($rootViewsPath)) break;
-          $parentScript = $dir . '/script.js';
-          if (file_exists($parentScript)) {
-            $jsPath = $parentScript;
-            break;
-          }
-        }
-      }
+      $foundScripts[] = $jsPathSameName;
     }
 
-    if ($jsPath) {
-      $relativePath = ltrim(str_replace($rootViewsPath, '', $jsPath), '/');
-      $url = asset('assets/' . $relativePath);
-      $html .= PHP_EOL . '<script src="' . $url . '"></script>' . PHP_EOL;
+    // 2. Climbing discovery: Kumpulkan script.js dari folder saat ini hingga ke root views
+    $currentDir = is_dir($phpFilePath) ? $phpFilePath : dirname($phpFilePath);
+    while (strpos($currentDir, $rootViewsPath) === 0) {
+      $jsPathScript = $currentDir . '/script.js';
+      if (file_exists($jsPathScript)) {
+        $foundScripts[] = $jsPathScript;
+      }
+
+      if ($currentDir === $rootViewsPath) break;
+      $currentDir = dirname($currentDir);
+    }
+
+    // Suntikkan skrip (urutan terbalik agar parent di-load lebih dulu)
+    foreach (array_reverse(array_unique($foundScripts)) as $jsFullPath) {
+      $relativePath = ltrim(str_replace($rootViewsPath, '', $jsFullPath), '/');
+      
+      // Gunakan tracking di View agar tidak terjadi duplikasi suntikan dalam satu request
+      if (View::addScript($relativePath)) {
+        $url = asset('assets/' . $relativePath);
+        $html .= PHP_EOL . '<script src="' . $url . '"></script>' . PHP_EOL;
+      }
     }
   }
 

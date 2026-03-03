@@ -20,6 +20,12 @@ class View implements RenderableInterface
    */
   protected static array $styles = [];
 
+  /**
+   * Menyimpan daftar path JS yang ditemukan secara otomatis (untuk tracking duplikasi).
+   * @var array<string>
+   */
+  protected static array $scripts = [];
+
   public function __construct(
     Container $container,
     ?string $path = null,
@@ -47,6 +53,19 @@ class View implements RenderableInterface
     if (!in_array($path, self::$styles)) {
       self::$styles[] = $path;
     }
+  }
+
+  /**
+   * Menambahkan path JS ke antrian (untuk tracking).
+   * @return bool True jika baru ditambahkan, false jika sudah ada.
+   */
+  public static function addScript(string $path): bool
+  {
+    if (!in_array($path, self::$scripts)) {
+      self::$scripts[] = $path;
+      return true;
+    }
+    return false;
   }
 
   /**

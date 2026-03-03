@@ -784,7 +784,7 @@ PHP;
   <section class="mazu-hero">
     <h1 class="mazu-title">Dashboard</h1>
     <p class="mazu-subtitle">
-      Anda berhasil login dengan Google. Berikut informasi akun Anda.
+      Anda berhasil login dengan Google. Berikut informasi akun anda.
     </p>
   </section>
 

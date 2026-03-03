@@ -32,7 +32,7 @@ class UploadedFile
     $targetPath = rtrim($directory, '/') . '/' . $targetFileName;
 
     // Log untuk debugging di dalam UploadedFile
-    error_log("DEBUG_UPLOADEDFILE: Moving from " . $this->tmpName . " to " . $targetPath);
+    logger()->error("DEBUG_UPLOADEDFILE: Moving from " . $this->tmpName . " to " . $targetPath, ['tmpName' => $this->tmpName, 'targetPath' => $targetPath]);
 
     return @move_uploaded_file($this->tmpName, $targetPath);
   }

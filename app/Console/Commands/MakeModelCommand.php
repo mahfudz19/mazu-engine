@@ -134,7 +134,7 @@ class {{CLASS_NAME}} extends Model
         'error_message' => ['type' => 'longtext', 'nullable' => true],
         'completed_at' => ['type' => 'bigint', 'nullable' => true],
 
-        // Tambahkan custom fields untuk project Anda di sini
+        // Tambahkan custom fields untuk project anda di sini
         // Contoh:
         // 'priority' => ['type' => 'enum', 'values' => ['low', 'medium', 'high'], 'default' => 'medium'],
         // 'retry_count' => ['type' => 'int', 'default' => 0],
