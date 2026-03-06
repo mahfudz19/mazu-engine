@@ -877,3 +877,49 @@ class SpaPrefetcher {
 }
 
 window.SpaPrefetcher = SpaPrefetcher;
+// Function to normalize URLs with base_url
+function normalizeUrlWithBaseUrl(url, baseUrl) {
+    // Skip jika URL sudah lengkap (http/https) atau dimulai dengan #
+    if (!url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('#')) {
+        return url;
+    }
+    
+    // Skip jika URL sudah menggunakan base_url
+    if (url.startsWith(baseUrl)) {
+        return url;
+    }
+    
+    // Tambahkan base_url untuk URL yang dimulai dengan /
+    if (url.startsWith('/')) {
+        return baseUrl + url;
+    }
+    
+    return url;
+}
+
+// Apply base_url normalization setelah SPA navigation
+function applyBaseUrlNormalization() {
+    const baseUrl = window.mazuConfig?.base_url || '';
+    
+    // Process all <a> tags with data-spa
+    document.querySelectorAll('a[data-spa]').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href) {
+            link.setAttribute('href', normalizeUrlWithBaseUrl(href, baseUrl));
+        }
+    });
+    
+    // Process all <form> tags with data-spa
+    document.querySelectorAll('form[data-spa]').forEach(form => {
+        const action = form.getAttribute('action');
+        if (action) {
+            form.setAttribute('action', normalizeUrlWithBaseUrl(action, baseUrl));
+        }
+    });
+}
+
+// Call normalization after DOM is ready and after SPA navigation
+document.addEventListener('DOMContentLoaded', applyBaseUrlNormalization);
+
+// Also call after SPA navigation completes
+window.addEventListener('spa:navigated', applyBaseUrlNormalization);

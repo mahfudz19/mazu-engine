@@ -157,7 +157,7 @@ class GoogleAuthSetupCommand implements CommandInterface
     $keys = [
       'GOOGLE_CLIENT_ID' => '',
       'GOOGLE_CLIENT_SECRET' => '',
-      'GOOGLE_REDIRECT_URI' => 'http://localhost:9000/auth/callback',
+      'GOOGLE_REDIRECT_URI' => env('GOOGLE_REDIRECT_URI'),
       'GOOGLE_ALLOWED_DOMAIN' => '',
     ];
 
