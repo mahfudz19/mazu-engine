@@ -877,6 +877,7 @@ class SpaPrefetcher {
 }
 
 window.SpaPrefetcher = SpaPrefetcher;
+
 // Function to normalize URLs with base_url
 function normalizeUrlWithBaseUrl(url, baseUrl) {
     // Skip jika URL sudah lengkap (http/https) atau dimulai dengan #
@@ -897,15 +898,22 @@ function normalizeUrlWithBaseUrl(url, baseUrl) {
     return url;
 }
 
-// Apply base_url normalization setelah SPA navigation
+// Tambahkan debugging
 function applyBaseUrlNormalization() {
     const baseUrl = window.mazuConfig?.base_url || '';
+    
+    let processedLinks = 0;
+    let processedForms = 0;
     
     // Process all <a> tags with data-spa
     document.querySelectorAll('a[data-spa]').forEach(link => {
         const href = link.getAttribute('href');
         if (href) {
-            link.setAttribute('href', normalizeUrlWithBaseUrl(href, baseUrl));
+            const newHref = normalizeUrlWithBaseUrl(href, baseUrl);
+            if (newHref !== href) {
+                link.setAttribute('href', newHref);
+                processedLinks++;
+            }
         }
     });
     
@@ -913,13 +921,34 @@ function applyBaseUrlNormalization() {
     document.querySelectorAll('form[data-spa]').forEach(form => {
         const action = form.getAttribute('action');
         if (action) {
-            form.setAttribute('action', normalizeUrlWithBaseUrl(action, baseUrl));
+            const newAction = normalizeUrlWithBaseUrl(action, baseUrl);
+            if (newAction !== action) {
+                form.setAttribute('action', newAction);
+                processedForms++;
+            }
         }
     });
 }
 
-// Call normalization after DOM is ready and after SPA navigation
-document.addEventListener('DOMContentLoaded', applyBaseUrlNormalization);
+// MutationObserver untuk elemen baru
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList') {
+            // Delay sedikit untuk memastikan elemen ter-render sempurna
+            setTimeout(applyBaseUrlNormalization, 100);
+        }
+    });
+});
 
-// Also call after SPA navigation completes
+// Mulai observe seluruh body
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+
+// Event listener yang sudah ada
+document.addEventListener('DOMContentLoaded', applyBaseUrlNormalization);
 window.addEventListener('spa:navigated', applyBaseUrlNormalization);
+
+// Fallback: cek setiap beberapa detik untuk elemen yang mungkin terlewat
+setInterval(applyBaseUrlNormalization, 2000);
