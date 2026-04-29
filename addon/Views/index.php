@@ -6,8 +6,8 @@
     Simple enough for beginners, powerful enough for enterprise.
   </p>
   <div class="hero-actions">
-    <a href="https://github.com/mazu-framework/docs" class="btn btn-filled">Get Started</a>
-    <a href="https://github.com/mazu-framework" class="btn btn-outlined">GitHub</a>
+    <a href="https://github.com/mahfudz19/mazu-engine/docs" class="btn btn-filled">Get Started</a>
+    <a href="https://github.com/mahfudz19/mazu-engine" class="btn btn-outlined">GitHub</a>
   </div>
 </section>
 

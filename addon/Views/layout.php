@@ -37,8 +37,8 @@
           <img src="<?= getBaseUrl('/logo_app/mazu-logo.svg') ?>" alt="Mazu Engine" height="40" />
         </a>
         <nav class="mazu-nav">
-          <a href="https://github.com/mazu-framework/docs" target="_blank">Documentation</a>
-          <a href="https://github.com/mazu-framework" target="_blank">GitHub</a>
+          <a href="https://github.com/mahfudz19/mazu-engine/docs" target="_blank">Documentation</a>
+          <a href="https://github.com/mahfudz19/mazu-engine" target="_blank">GitHub</a>
         </nav>
       </header>
 
