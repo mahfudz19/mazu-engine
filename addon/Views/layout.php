@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @var \App\Core\View\PageMeta $meta
+ * @var string $children
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 
