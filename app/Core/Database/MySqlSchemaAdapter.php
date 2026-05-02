@@ -18,14 +18,27 @@ class MySqlSchemaAdapter implements SchemaAdapterInterface
   public function createTable(Database $db, string $table, array $schema): void
   {
     $sql = $this->buildCreateTableSql($table, $schema);
-    // Kita asumsikan Database punya method query() atau kita gunakan prepare/execute
-    $db->query($sql);
+
+    // Database::query() menangkapPDOException dan return false, jadi kita harus cek return value
+    $result = $db->query($sql);
+
+    if ($result === false) {
+      // Query gagal tapi exception ditangkap di Database::query()
+      // Kita lempar exception agar error terlihat di migration
+      throw new \RuntimeException(
+        "Gagal membuat tabel '{$table}': Query SQL gagal. " .
+          "Periksa log error di storage/logs/app.log untuk detail. " .
+          "\nSQL: " . $sql
+      );
+    }
   }
 
   private function buildCreateTableSql(string $table, array $schema): string
   {
     $columnsSql = [];
     $primaryKeys = [];
+    $foreignKeys = [];
+    $uniqueKeys = [];
 
     foreach ($schema as $name => $def) {
       $type = strtolower($def['type'] ?? 'varchar');
@@ -54,10 +67,34 @@ class MySqlSchemaAdapter implements SchemaAdapterInterface
       if (!empty($def['primary'])) {
         $primaryKeys[] = "`{$name}`";
       }
+
+      // Support unique constraint
+      if (!empty($def['unique'])) {
+        $uniqueKeys[] = "`{$name}`";
+      }
+
+      // Support foreign key constraint
+      if (!empty($def['foreign'])) {
+        $foreignRef = $def['foreign']; // format: 'table.column'
+        [$foreignTable, $foreignColumn] = explode('.', $foreignRef);
+        $onDelete = $def['on_delete'] ?? 'CASCADE';
+        // Gunakan 'fk_on_update' untuk foreign key agar tidak konflik dengan 'on_update' untuk timestamp
+        $fkOnUpdate = $def['fk_on_update'] ?? $def['on_update'] ?? 'RESTRICT';
+        $foreignKeys[] = "CONSTRAINT `fk_{$table}_{$name}` FOREIGN KEY (`{$name}`) REFERENCES `{$foreignTable}`(`{$foreignColumn}`) ON DELETE {$onDelete} ON UPDATE {$fkOnUpdate}";
+      }
     }
 
     if (!empty($primaryKeys)) {
       $columnsSql[] = 'PRIMARY KEY (' . implode(', ', $primaryKeys) . ')';
+    }
+
+    if (!empty($uniqueKeys)) {
+      $columnsSql[] = 'UNIQUE KEY `uq_' . $table . '_' . implode('_', array_map(fn($k) => str_replace('`', '', $k), $uniqueKeys)) . '` (' . implode(', ', $uniqueKeys) . ')';
+    }
+
+    // Add foreign key constraints
+    foreach ($foreignKeys as $fk) {
+      $columnsSql[] = $fk;
     }
 
     $columns = implode(",\n  ", $columnsSql);

@@ -68,10 +68,18 @@ class ModelSchemaMigrator
     $adapter = $this->getAdapter($db);
 
     if ($adapter->tableExists($db, $table)) {
+      // Tabel sudah ada, skip tapi log informasi
+      echo color("Tabel '{$table}' sudah ada, dilewati.\n", "yellow");
       return null;
     }
 
-    $adapter->createTable($db, $table, $schema);
+    try {
+      $adapter->createTable($db, $table, $schema);
+      echo color("Tabel '{$table}' berhasil dibuat.\n", "green");
+    } catch (\RuntimeException $e) {
+      // Re-throw dengan informasi lebih detail
+      throw $e;
+    }
 
     $this->seedIfNeeded($instance, $db, $table);
 
@@ -93,10 +101,29 @@ class ModelSchemaMigrator
     $results = [];
     $files = glob($modelsDir . '/*.php') ?: [];
 
+    // Kumpulkan semua class name dulu
+    $models = [];
     foreach ($files as $file) {
       $base = basename($file, '.php');
-      $className = 'Addon\\Models\\' . $base;
+      $models[] = 'Addon\\Models\\' . $base;
+    }
 
+    // Urutkan: UserModel harus selalu PERTAMA karena tabel lain punya foreign key ke users.id
+    usort($models, function ($a, $b) {
+      $aIsUser = str_ends_with($a, 'UserModel');
+      $bIsUser = str_ends_with($b, 'UserModel');
+
+      if ($aIsUser && !$bIsUser) {
+        return -1; // UserModel selalu pertama
+      }
+      if (!$aIsUser && $bIsUser) {
+        return 1;
+      }
+      // Selain UserModel, urutkan alfabetis
+      return strcmp($a, $b);
+    });
+
+    foreach ($models as $className) {
       try {
         $table = $this->migrateModel($className, $container);
       } catch (\Throwable $e) {

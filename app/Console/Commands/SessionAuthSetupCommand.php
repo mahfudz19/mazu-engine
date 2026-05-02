@@ -861,8 +861,8 @@ PHP;
     $root = __DIR__ . '/../../..';
     $routerPath = $root . '/addon/Router/index.php';
 
-    if ($withRole) {
-      $routes = <<<'PHP'
+    // Routes untuk Hybrid Auth (Google OAuth + Manual OTP)
+    $routes = <<<'PHP'
 <?php
 
 use App\Core\Http\Request;
@@ -873,7 +873,7 @@ use App\Services\SessionService;
 
 /** @var \App\Core\Routing\Router $router */
 
-// Guest routes (login, register, password reset)
+// Guest routes (login, register, password reset, OTP verification)
 $router->group(['middleware' => ['guest']], function () use ($router) {
     // Login
     $router->get('/login', [AuthController::class, 'showLogin']);
@@ -883,11 +883,20 @@ $router->group(['middleware' => ['guest']], function () use ($router) {
     $router->get('/register', [AuthController::class, 'showRegister']);
     $router->post('/register', [AuthController::class, 'register']);
     
+    // OTP Verification
+    $router->get('/verify-otp', [AuthController::class, 'showVerifyOtp']);
+    $router->post('/verify-otp', [AuthController::class, 'verifyOtp']);
+    $router->get('/resend-otp', [AuthController::class, 'resendOtp']);
+    $router->get('/otp-sent', [AuthController::class, 'showOtpSent']);
+    
     // Password reset
     $router->get('/password/forgot', [AuthController::class, 'showForgotPassword']);
     $router->post('/password/forgot', [AuthController::class, 'sendResetLink']);
     $router->get('/password/reset/{token}', [AuthController::class, 'showResetPassword']);
     $router->post('/password/reset', [AuthController::class, 'resetPassword']);
+    
+    // Google OAuth
+    $router->get('/auth/callback', [AuthController::class, 'googleCallback']);
 });
 
 // Auth routes (require login)
@@ -906,52 +915,6 @@ $router->get('/', function (Request $request, Response $response) {
     return $response->redirect('/dashboard');
 });
 PHP;
-    } else {
-      $routes = <<<'PHP'
-<?php
-
-use App\Core\Http\Request;
-use App\Core\Http\Response;
-use Addon\Controllers\AuthController;
-use Addon\Models\UserModel;
-use App\Services\SessionService;
-
-/** @var \App\Core\Routing\Router $router */
-
-// Guest routes (login, register, password reset)
-$router->group(['middleware' => ['guest']], function () use ($router) {
-    // Login
-    $router->get('/login', [AuthController::class, 'showLogin']);
-    $router->post('/login', [AuthController::class, 'login']);
-    
-    // Register
-    $router->get('/register', [AuthController::class, 'showRegister']);
-    $router->post('/register', [AuthController::class, 'register']);
-    
-    // Password reset
-    $router->get('/password/forgot', [AuthController::class, 'showForgotPassword']);
-    $router->post('/password/forgot', [AuthController::class, 'sendResetLink']);
-    $router->get('/password/reset/{token}', [AuthController::class, 'showResetPassword']);
-    $router->post('/password/reset', [AuthController::class, 'resetPassword']);
-});
-
-// Auth routes (require login)
-$router->group(['middleware' => ['auth']], function () use ($router) {
-    // Dashboard
-    $router->get('/dashboard', function (Request $request, Response $response) {
-        return $response->renderPage([], ['path' => '/dashboard', 'meta' => ['title' => 'Dashboard | ' . env('APP_NAME')]]);
-    });
-    
-    // Logout
-    $router->post('/logout', [AuthController::class, 'logout']);
-});
-
-// Home route
-$router->get('/', function (Request $request, Response $response) {
-    return $response->redirect('/dashboard');
-});
-PHP;
-    }
 
     file_put_contents($routerPath, $routes);
     echo "   ✓ Routes configured\n";
@@ -1498,7 +1461,200 @@ CSS;
 
     file_put_contents("$passwordDir/style.css", $passwordStyle);
 
-    echo "   ✓ Views created (auth/layout, auth/login, auth/register, auth/style, password/forgot, password/reset, password/style, dashboard/index, dashboard/style)\n";
+    // OTP Sent view
+    $otpSentView = <<<'PHP'
+<?php
+
+/**
+ * @var \App\Core\View\PageMeta $meta
+ * @var string $email Email tujuan OTP
+ */
+?>
+
+<div class="otp-sent-container">
+    <div class="otp-sent-header">
+        <div class="otp-sent-icon">📧</div>
+        <h1 class="otp-sent-title">Email Terkirim!</h1>
+        <p class="otp-sent-description">
+            Kami telah mengirim kode verifikasi ke<br>
+            <strong><?= htmlspecialchars($email ?? '') ?></strong>
+        </p>
+    </div>
+
+    <div class="otp-sent-instructions">
+        <div class="instruction-step">
+            <span class="step-number">1</span>
+            <span class="step-text">Buka inbox email Anda</span>
+        </div>
+        <div class="instruction-step">
+            <span class="step-number">2</span>
+            <span class="step-text">Cari email dari Mazu Framework</span>
+        </div>
+        <div class="instruction-step">
+            <span class="step-number">3</span>
+            <span class="step-text">Salin kode 6 digit dari email</span>
+        </div>
+        <div class="instruction-step">
+            <span class="step-number">4</span>
+            <span class="step-text">Masukkan kode di halaman verifikasi</span>
+        </div>
+    </div>
+
+    <div class="otp-sent-actions">
+        <a
+            href="/verify-otp?email=<?= urlencode($email ?? '') ?>"
+            class="otp-sent-button primary"
+            data-spa
+        >
+            Buka Halaman Verifikasi
+        </a>
+    </div>
+
+    <a href="/register" class="otp-sent-back" data-spa>
+        ← Kembali ke Register
+    </a>
+</div>
+PHP;
+
+    file_put_contents("$authDir/otp-sent.php", $otpSentView);
+
+    // Verify OTP view
+    $verifyOtpView = <<<'PHP'
+<?php
+
+/**
+ * @var \App\Core\View\PageMeta $meta
+ * @var string $email Email user yang akan diverifikasi
+ * @var string|null $error Error message (jika ada)
+ */
+?>
+
+<div class="otp-verification-container">
+    <div class="otp-header">
+        <div class="otp-icon">🔐</div>
+        <h1 class="otp-title">Verifikasi Email</h1>
+        <p class="otp-description">
+            Kami telah mengirim kode 6-digit ke<br>
+            <strong><?= htmlspecialchars($email ?? '') ?></strong>
+        </p>
+    </div>
+
+    <?php if (isset($error)): ?>
+        <div class="otp-error" role="alert">
+            <span class="otp-error-icon">⚠️</span>
+            <span><?= htmlspecialchars($error) ?></span>
+        </div>
+    <?php endif; ?>
+
+    <form method="POST" action="/verify-otp" id="otp-form">
+        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+        <input type="hidden" name="email" value="<?= htmlspecialchars($email ?? '') ?>">
+
+        <div class="otp-inputs" role="group" aria-label="Kode verifikasi 6 digit">
+            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" required class="otp-digit" data-index="0">
+            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="1">
+            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="2">
+            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="3">
+            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="4">
+            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="5">
+        </div>
+
+        <input type="hidden" name="otp_code" id="otp-code-hidden" required>
+
+        <button type="submit" class="otp-button" id="verify-button" disabled>
+            <span class="button-text">Verifikasi</span>
+        </button>
+    </form>
+
+    <div class="otp-footer">
+        <div class="otp-timer" id="otp-timer">
+            <span class="timer-icon">⏱️</span>
+            <span class="timer-text" id="timer-text">Kode berlaku 15:00</span>
+        </div>
+
+        <a href="/register" class="otp-back-link" data-spa>
+            ← Kembali ke Register
+        </a>
+    </div>
+</div>
+
+<script>
+(function() {
+    const inputs = document.querySelectorAll('.otp-digit');
+    const form = document.getElementById('otp-form');
+    const verifyButton = document.getElementById('verify-button');
+    const otpHidden = document.getElementById('otp-code-hidden');
+    const timerText = document.getElementById('timer-text');
+
+    let timeLeft = 900; // 15 minutes
+
+    inputs[0].focus();
+
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            const value = e.target.value;
+            if (!/^\d*$/.test(value)) {
+                e.target.value = '';
+                return;
+            }
+            if (value.length === 1 && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+            checkAllFilled();
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && input.value === '' && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasted = e.clipboardData.getData('text').slice(0, 6);
+            if (/^\d{6}$/.test(pasted)) {
+                inputs.forEach((inp, i) => {
+                    inp.value = pasted[i];
+                    if (i < 5) inputs[i + 1].focus();
+                });
+                checkAllFilled();
+            }
+        });
+    });
+
+    function checkAllFilled() {
+        const allFilled = Array.from(inputs).every(i => i.value.length === 1);
+        if (allFilled) {
+            verifyButton.disabled = false;
+            otpHidden.value = Array.from(inputs).map(i => i.value).join('');
+        } else {
+            verifyButton.disabled = true;
+            otpHidden.value = '';
+        }
+    }
+
+    function startTimer() {
+        const interval = setInterval(() => {
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                timerText.textContent = 'Kode telah kedaluwarsa';
+                return;
+            }
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerText.textContent = `Kode berlaku ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    startTimer();
+})();
+</script>
+PHP;
+
+    file_put_contents("$authDir/verify-otp.php", $verifyOtpView);
+
+    echo "   ✓ Views created (auth/layout, auth/login, auth/register, auth/otp-sent, auth/verify-otp, auth/style, password/forgot, password/reset, password/style, dashboard/index, dashboard/style)\n";
   }
 
   private function printNextSteps(bool $withRole): void
