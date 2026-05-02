@@ -58,7 +58,6 @@ class SessionAuthSetupCommand implements CommandInterface
 
     $this->setupEnvPlaceholders();
     $this->setupUserModel($dbConnection, $withRole);
-    $this->setupPasswordHelper();
     $this->setupAuthController($withRole);
     $this->setupAuthMiddleware($withRole);
     $this->setupRoutes($withRole);
@@ -289,7 +288,7 @@ class UserModel extends Model
 
         \$setParts = [];
         foreach (\$data as \$column => \$value) {
-            \$setParts[] = "\${column} = :\${column}";
+            \$setParts[] = "{\$column} = :{\$column}";
         }
 
         \$sql = "UPDATE {\$this->table} SET " . implode(', ', \$setParts) . " WHERE id = :id";
@@ -348,95 +347,6 @@ PHP;
     echo "   ✓ UserModel created\n";
   }
 
-  private function setupPasswordHelper(): void
-  {
-    echo "🔑 Setup PasswordHelper...\n";
-
-    $root = __DIR__ . '/../../..';
-    $helperDir = $root . '/addon/Helpers';
-    $helperPath = $helperDir . '/PasswordHelper.php';
-
-    if (!is_dir($helperDir)) {
-      mkdir($helperDir, 0755, true);
-    }
-
-    $template = <<<PHP
-<?php
-
-namespace App\Helpers;
-
-/**
- * Password Helper - Session Authentication
- * 
- * Fitur:
- * - Hash password dengan bcrypt
- * - Verify password hash
- * - Validate password strength (min 8 characters)
- */
-class PasswordHelper
-{
-    /**
-     * Minimum password length
-     */
-    private const MIN_LENGTH = 8;
-
-    /**
-     * Hash password menggunakan bcrypt
-     * 
-     * @param string \$password Plain text password
-     * @return string Hashed password
-     */
-    public static function hash(string \$password): string
-    {
-        return password_hash(\$password, PASSWORD_BCRYPT, ['cost' => 10]);
-    }
-
-    /**
-     * Verify password against hash
-     * 
-     * @param string \$password Plain text password
-     * @param string \$hash Hashed password
-     * @return bool True if password matches
-     */
-    public static function verify(string \$password, string \$hash): bool
-    {
-        return password_verify(\$password, \$hash);
-    }
-
-    /**
-     * Validate password strength
-     * 
-     * @param string \$password Password to validate
-     * @return array{valid: bool, errors: array<string>} Validation result
-     */
-    public static function validate(string \$password): array
-    {
-        \$errors = [];
-
-        if (strlen(\$password) < self::MIN_LENGTH) {
-            \$errors[] = "Password minimal " . self::MIN_LENGTH . " karakter";
-        }
-
-        return [
-            'valid' => empty(\$errors),
-            'errors' => \$errors,
-        ];
-    }
-
-    /**
-     * Get minimum password length
-     */
-    public static function getMinLength(): int
-    {
-        return self::MIN_LENGTH;
-    }
-}
-PHP;
-
-    file_put_contents($helperPath, $template);
-    echo "   ✓ PasswordHelper created\n";
-  }
-
   private function setupAuthController(bool $withRole): void
   {
     echo "🎮 Setup AuthController...\n";
@@ -466,7 +376,6 @@ namespace Addon\Controllers;
 
 use Addon\Models\UserModel;
 use App\Services\SessionService;
-use App\Helpers\PasswordHelper;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
 use App\Core\View\View;
@@ -490,6 +399,54 @@ class AuthController
         private UserModel \$users,
         private SessionService \$session,
     ) {}
+
+    /**
+     * Minimum password length
+     */
+    private const MIN_PASSWORD_LENGTH = 8;
+
+    /**
+     * Hash password menggunakan bcrypt
+     *
+     * @param string \$password Plain text password
+     * @return string Hashed password
+     */
+    private function hashPassword(string \$password): string
+    {
+        return password_hash(\$password, PASSWORD_BCRYPT, ['cost' => 10]);
+    }
+
+    /**
+     * Verify password against hash
+     *
+     * @param string \$password Plain text password
+     * @param string \$hash Hashed password
+     * @return bool True if password matches
+     */
+    private function verifyPassword(string \$password, string \$hash): bool
+    {
+        return password_verify(\$password, \$hash);
+    }
+
+    /**
+     * Validate password strength
+     *
+     * @param string \$password Password to validate
+     * @return array{valid: bool, errors: array<string>} Validation result
+     */
+    private function validatePassword(string \$password): array
+    {
+        \$errors = [];
+
+        if (strlen(\$password) < self::MIN_PASSWORD_LENGTH) {
+            \$errors[] = "Password minimal " . self::MIN_PASSWORD_LENGTH . " karakter";
+        }
+
+        return [
+            'valid' => empty(\$errors),
+            'errors' => \$errors,
+        ];
+    }
 
     /**
      * Check if user is logged in
@@ -571,7 +528,7 @@ class AuthController
         }
 
         // Verify password (access array property)
-        if (!PasswordHelper::verify(\$password, \$user['password'])) {
+        if (!\$this->verifyPassword(\$password, \$user['password'])) {
             return \$response->renderPage([], ['path' => '/login', 'meta' => ['title' => 'Login'], 'error' => 'Password salah']);
         }
 
@@ -622,7 +579,7 @@ class AuthController
         }
 
         // Validate password strength
-        \$passwordValidation = PasswordHelper::validate(\$password);
+        \$passwordValidation = \$this->validatePassword(\$password);
         if (!\$passwordValidation['valid']) {
             return \$response->renderPage([], ['path' => '/register', 'meta' => ['title' => 'Register'], 'error' => implode(', ', \$passwordValidation['errors'])]);
         }
@@ -639,7 +596,7 @@ class AuthController
         \$now = date('Y-m-d H:i:s');
         \$userData = [
             'email' => \$email,
-            'password' => PasswordHelper::hash(\$password),
+            'password' => \$this->hashPassword(\$password),
             'name' => \$name,
             'avatar' => null,
             'email_verified_at' => null,
@@ -769,7 +726,7 @@ class AuthController
         }
 
         // Validate new password
-        \$passwordValidation = PasswordHelper::validate(\$password);
+        \$passwordValidation = \$this->validatePassword(\$password);
         if (!\$passwordValidation['valid']) {
             return \$response->renderPage([], ['path' => '/password/reset', 'meta' => ['title' => 'Reset Password'], 'error' => implode(', ', \$passwordValidation['errors'])]);
         }
@@ -780,7 +737,7 @@ class AuthController
             return \$response->renderPage([], ['path' => '/password/reset', 'meta' => ['title' => 'Reset Password'], 'error' => 'Email tidak ditemukan']);
         }
 
-        \$this->users->updateById(\$user['id'], ['password' => PasswordHelper::hash(\$password)]);
+        \$this->users->updateById(\$user['id'], ['password' => \$this->hashPassword(\$password)]);
 
         return \$response->renderPage([
             'message' => 'Password berhasil direset. Silakan login dengan password baru',
