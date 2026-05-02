@@ -964,802 +964,541 @@ PHP;
     $root = __DIR__ . '/../../..';
     $viewsPath = $root . '/addon/Views';
 
-    // Create subdirectory for password views
+    // Create directories
+    $authDir = $viewsPath . '/(auth)';
     $passwordDir = $viewsPath . '/password';
+    $dashboardDir = $viewsPath . '/dashboard';
+
+    if (!is_dir($authDir)) {
+      mkdir($authDir, 0755, true);
+    }
 
     if (!is_dir($passwordDir)) {
       mkdir($passwordDir, 0755, true);
     }
 
+    if (!is_dir($dashboardDir)) {
+      mkdir($dashboardDir, 0755, true);
+    }
+
+    // Auth layout
+    $authLayout = <<<'PHP'
+<?php
+
+/**
+ * @var \App\Core\View\PageMeta $meta
+ * @var string $children
+ */
+?>
+<div class="auth-container">
+    <div class="auth-card" data-layout="(auth)/layout.php">
+        <?= $children; ?>
+    </div>
+</div>
+PHP;
+
+    file_put_contents("$authDir/layout.php", $authLayout);
+
     // Login view
     $loginView = <<<'PHP'
 <?php
+
 /**
  * @var \App\Core\View\PageMeta $meta
  */
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= $meta->title ?? 'Login' ?></title>
-  <link rel="stylesheet" href="<?= asset('addon/Views/style.css') ?>">
-  <style>
-    .auth-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: var(--md-sys-color-background);
-      padding: 24px;
-    }
-    .auth-card {
-      width: 100%;
-      max-width: 420px;
-      background-color: var(--md-surface-1);
-      border-radius: 28px;
-      padding: 40px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .auth-title {
-      font-family: "Poppins", sans-serif;
-      font-weight: 600;
-      font-size: 1.75rem;
-      text-align: center;
-      margin-bottom: 24px;
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-error {
-      background-color: var(--md-sys-color-error-container);
-      border: 1px solid var(--md-sys-color-error);
-      color: var(--md-sys-color-on-error-container);
-      padding: 12px 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
-    .auth-form-group {
-      margin-bottom: 20px;
-    }
-    .auth-label {
-      display: block;
-      font-weight: 500;
-      font-size: 0.9rem;
-      color: var(--md-sys-color-on-surface);
-      margin-bottom: 8px;
-    }
-    .auth-input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: 12px;
-      font-size: 1rem;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
-      background-color: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-input:focus {
-      outline: none;
-      border-color: var(--md-sys-color-primary);
-    }
-    .auth-button {
-      width: 100%;
-      height: 48px;
-      background-color: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      border: none;
-      border-radius: 24px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .auth-button:hover {
-      background-color: var(--md-sys-color-on-primary-container);
-      box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
-    }
-    .auth-links {
-      margin-top: 20px;
-      text-align: center;
-    }
-    .auth-link {
-      color: var(--md-sys-color-primary);
-      font-size: 0.9rem;
-      text-decoration: none;
-    }
-    .auth-link:hover {
-      color: var(--md-sys-color-on-primary-container);
-    }
-    .auth-divider {
-      margin: 8px 0;
-      text-align: center;
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 0.875rem;
-    }
-  </style>
-</head>
-<body>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1 class="auth-title">Login</h1>
-      
-      <?php if (isset($error)): ?>
-        <div class="auth-error">
-          <?= htmlspecialchars($error) ?>
-        </div>
-      <?php endif; ?>
-      
-      <form method="POST" action="/login">
-        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-        
-        <div class="auth-form-group">
-          <label for="email" class="auth-label">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            class="auth-input"
-            value="<?= htmlspecialchars($_GET['email'] ?? '') ?>"
-            required
-          >
-        </div>
-        
-        <div class="auth-form-group">
-          <label for="password" class="auth-label">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            class="auth-input"
-            required
-          >
-        </div>
-        
-        <button type="submit" class="auth-button">
-          Login
-        </button>
-      </form>
-      
-      <div class="auth-links">
-        <a data-spa href="/password/forgot" class="auth-link">Lupa password?</a>
-      </div>
-      
-      <div class="auth-divider">
-        <span>Belum punya akun?</span>
-        <a data-spa href="/register" class="auth-link">Register</a>
-      </div>
-    </div>
+<h1 class="auth-title">Login</h1>
+
+<?php if (isset($error)): ?>
+  <div class="auth-error">
+    <?= htmlspecialchars($error) ?>
   </div>
-</body>
-</html>
+<?php endif; ?>
+
+<form method="POST" action="/login">
+  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+
+  <div class="auth-form-group">
+    <label for="email" class="auth-label">Email</label>
+    <input
+      type="email"
+      id="email"
+      name="email"
+      class="auth-input"
+      value="<?= htmlspecialchars($_GET['email'] ?? '') ?>"
+      required>
+  </div>
+
+  <div class="auth-form-group">
+    <label for="password" class="auth-label">Password</label>
+    <input
+      type="password"
+      id="password"
+      name="password"
+      class="auth-input"
+      required>
+  </div>
+
+  <button type="submit" class="auth-button">
+    Login
+  </button>
+</form>
+
+<div class="auth-links">
+  <a data-spa href="/password/forgot" class="auth-link">Lupa password?</a>
+</div>
+
+<div class="auth-divider">
+  <span>Belum punya akun?</span>
+  <a data-spa href="/register" class="auth-link">Register</a>
+</div>
 PHP;
 
-    file_put_contents("$viewsPath/login.php", $loginView);
+    file_put_contents("$authDir/login.php", $loginView);
 
     // Register view
     $registerView = <<<'PHP'
 <?php
+
 /**
  * @var \App\Core\View\PageMeta $meta
  */
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= $meta->title ?? 'Register' ?></title>
-  <link rel="stylesheet" href="<?= asset('addon/Views/style.css') ?>">
-  <style>
-    .auth-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: var(--md-sys-color-background);
-      padding: 24px;
-    }
-    .auth-card {
-      width: 100%;
-      max-width: 420px;
-      background-color: var(--md-surface-1);
-      border-radius: 28px;
-      padding: 40px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .auth-title {
-      font-family: "Poppins", sans-serif;
-      font-weight: 600;
-      font-size: 1.75rem;
-      text-align: center;
-      margin-bottom: 24px;
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-error {
-      background-color: var(--md-sys-color-error-container);
-      border: 1px solid var(--md-sys-color-error);
-      color: var(--md-sys-color-on-error-container);
-      padding: 12px 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
-    .auth-form-group {
-      margin-bottom: 20px;
-    }
-    .auth-label {
-      display: block;
-      font-weight: 500;
-      font-size: 0.9rem;
-      color: var(--md-sys-color-on-surface);
-      margin-bottom: 8px;
-    }
-    .auth-input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: 12px;
-      font-size: 1rem;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
-      background-color: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-input:focus {
-      outline: none;
-      border-color: var(--md-sys-color-primary);
-    }
-    .auth-button {
-      width: 100%;
-      height: 48px;
-      background-color: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      border: none;
-      border-radius: 24px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .auth-button:hover {
-      background-color: var(--md-sys-color-on-primary-container);
-      box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
-    }
-    .auth-links {
-      margin-top: 20px;
-      text-align: center;
-    }
-    .auth-link {
-      color: var(--md-sys-color-primary);
-      font-size: 0.9rem;
-      text-decoration: none;
-    }
-    .auth-link:hover {
-      color: var(--md-sys-color-on-primary-container);
-    }
-    .auth-divider {
-      margin: 8px 0;
-      text-align: center;
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 0.875rem;
-    }
-  </style>
-</head>
-<body>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1 class="auth-title">Register</h1>
-      
-      <?php if (isset($error)): ?>
-        <div class="auth-error">
-          <?= htmlspecialchars($error) ?>
-        </div>
-      <?php endif; ?>
-      
-      <form method="POST" action="/register">
-        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-        
-        <div class="auth-form-group">
-          <label for="name" class="auth-label">Nama Lengkap</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            class="auth-input"
-            value="<?= htmlspecialchars($_GET['name'] ?? '') ?>"
-            required
-          >
-        </div>
-        
-        <div class="auth-form-group">
-          <label for="email" class="auth-label">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            class="auth-input"
-            value="<?= htmlspecialchars($_GET['email'] ?? '') ?>"
-            required
-          >
-        </div>
-        
-        <div class="auth-form-group">
-          <label for="password" class="auth-label">Password (min. 8 karakter)</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            class="auth-input"
-            minlength="8"
-            required
-          >
-        </div>
-        
-        <div class="auth-form-group">
-          <label for="password_confirmation" class="auth-label">Konfirmasi Password</label>
-          <input
-            type="password"
-            id="password_confirmation"
-            name="password_confirmation"
-            class="auth-input"
-            minlength="8"
-            required
-          >
-        </div>
-        
-        <button type="submit" class="auth-button">
-          Register
-        </button>
-      </form>
-      
-      <div class="auth-divider">
-        <span>Sudah punya akun?</span>
-        <a data-spa href="/login" class="auth-link">Login</a>
-      </div>
-    </div>
+<h1 class="auth-title">Register</h1>
+
+<?php if (isset($error)): ?>
+  <div class="auth-error">
+    <?= htmlspecialchars($error) ?>
   </div>
-</body>
-</html>
+<?php endif; ?>
+
+<form method="POST" action="/register">
+  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+
+  <div class="auth-form-group">
+    <label for="name" class="auth-label">Nama Lengkap</label>
+    <input
+      type="text"
+      id="name"
+      name="name"
+      class="auth-input"
+      value="<?= htmlspecialchars($_GET['name'] ?? '') ?>"
+      required>
+  </div>
+
+  <div class="auth-form-group">
+    <label for="email" class="auth-label">Email</label>
+    <input
+      type="email"
+      id="email"
+      name="email"
+      class="auth-input"
+      value="<?= htmlspecialchars($_GET['email'] ?? '') ?>"
+      required>
+  </div>
+
+  <div class="auth-form-group">
+    <label for="password" class="auth-label">Password (min. 8 karakter)</label>
+    <input
+      type="password"
+      id="password"
+      name="password"
+      class="auth-input"
+      minlength="8"
+      required>
+  </div>
+
+  <div class="auth-form-group">
+    <label for="password_confirmation" class="auth-label">Konfirmasi Password</label>
+    <input
+      type="password"
+      id="password_confirmation"
+      name="password_confirmation"
+      class="auth-input"
+      minlength="8"
+      required>
+  </div>
+
+  <button type="submit" class="auth-button">
+    Register
+  </button>
+</form>
+
+<div class="auth-divider">
+  <span>Sudah punya akun?</span>
+  <a data-spa href="/login" class="auth-link">Login</a>
+</div>
 PHP;
 
-    file_put_contents("$viewsPath/register.php", $registerView);
+    file_put_contents("$authDir/register.php", $registerView);
+
+    // Auth style
+    $authStyle = <<<'CSS'
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--md-sys-color-background);
+  padding: 24px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--md-surface-1);
+  border-radius: 28px;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.auth-title {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 1.75rem;
+  text-align: center;
+  margin-bottom: 24px;
+  color: var(--md-sys-color-on-surface);
+}
+.auth-error {
+  background-color: var(--md-sys-color-error-container);
+  border: 1px solid var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error-container);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+.auth-form-group {
+  margin-bottom: 20px;
+}
+.auth-label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 8px;
+}
+.auth-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+.auth-input:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+}
+.auth-button {
+  width: 100%;
+  height: 48px;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.auth-button:hover {
+  background-color: var(--md-sys-color-on-primary-container);
+  box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
+}
+.auth-links {
+  margin-top: 20px;
+  text-align: center;
+}
+.auth-link {
+  color: var(--md-sys-color-primary);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.auth-link:hover {
+  color: var(--md-sys-color-on-primary-container);
+}
+.auth-divider {
+  margin: 8px 0;
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.875rem;
+}
+CSS;
+
+    file_put_contents("$authDir/style.css", $authStyle);
 
     // Dashboard view
     $dashboardView = <<<'PHP'
-<?php
-/**
- * @var \App\Core\View\PageMeta $meta
- */
-?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= $meta->title ?? 'Dashboard' ?></title>
-  <link rel="stylesheet" href="<?= asset('addon/Views/style.css') ?>">
-  <style>
-    body {
-      min-height: 100vh;
-      background-color: var(--md-sys-color-background);
-    }
-    .dashboard-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: var(--md-surface-1);
-      border-bottom: 1px solid var(--md-sys-color-outline-variant);
-    }
-    .dashboard-title {
-      font-family: "Poppins", sans-serif;
-      font-weight: 600;
-      font-size: 1.25rem;
-      color: var(--md-sys-color-on-surface);
-      margin: 0;
-    }
-    .dashboard-user {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .dashboard-user-name {
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 0.9rem;
-    }
-    .dashboard-logout {
-      color: var(--md-sys-color-error);
-      text-decoration: none;
-      font-weight: 500;
-      font-size: 0.9rem;
-      transition: color 0.2s;
-    }
-    .dashboard-logout:hover {
-      color: var(--md-sys-color-on-error-container);
-    }
-    .dashboard-main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-    .dashboard-card {
-      background-color: var(--md-surface-1);
-      border-radius: 28px;
-      padding: 32px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .dashboard-card-title {
-      font-family: "Poppins", sans-serif;
-      font-weight: 600;
-      font-size: 1.25rem;
-      color: var(--md-sys-color-on-surface);
-      margin: 0 0 16px 0;
-    }
-    .dashboard-card-desc {
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 1rem;
-      line-height: 1.6;
-      margin: 0;
-    }
-  </style>
-</head>
-<body>
-  <nav class="dashboard-nav">
-    <h1 class="dashboard-title">Dashboard</h1>
-    <div class="dashboard-user">
-      <span class="dashboard-user-name">Halo, User!</span>
-      <form method="POST" data-spa action="/logout">
-        <button class="dashboard-logout">Logout</button>
-      </form>
-    </div>
-  </nav>
-  
-  <main class="dashboard-main">
-    <div class="dashboard-card">
-      <h2 class="dashboard-card-title">Selamat Datang di Dashboard</h2>
-      <p class="dashboard-card-desc">Anda berhasil login dengan session authentication.</p>
-    </div>
-  </main>
-</body>
-</html>
+<main class="dashboard-main">
+  <div class="dashboard-card">
+    <h2 class="dashboard-card-title">Selamat Datang di Dashboard</h2>
+    <p class="dashboard-card-desc">Anda berhasil login dengan session authentication.</p>
+    <form method="POST" data-spa action="/logout">
+      <button class="dashboard-logout">Logout</button>
+    </form>
+  </div>
+</main>
 PHP;
 
-    file_put_contents("$viewsPath/dashboard.php", $dashboardView);
+    file_put_contents("$dashboardDir/index.php", $dashboardView);
+
+    // Dashboard style
+    $dashboardStyle = <<<'CSS'
+
+.dashboard-logout {
+    color: var(--md-sys-color-error);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+.dashboard-logout:hover {
+    color: var(--md-sys-color-on-error-container);
+}
+.dashboard-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+}
+.dashboard-card {
+    background-color: var(--md-surface-1);
+    border-radius: 28px;
+    padding: 32px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.dashboard-card-title {
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: var(--md-sys-color-on-surface);
+    margin: 0 0 16px 0;
+}
+.dashboard-card-desc {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+}
+CSS;
+
+    file_put_contents("$dashboardDir/style.css", $dashboardStyle);
 
     // Forgot password view
     $forgotView = <<<'PHP'
-<?php
-/**
- * @var \App\Core\View\PageMeta $meta
- */
-?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= $meta->title ?? 'Lupa Password' ?></title>
-  <link rel="stylesheet" href="<?= asset('addon/Views/style.css') ?>">
-  <style>
-    .auth-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: var(--md-sys-color-background);
-      padding: 24px;
-    }
-    .auth-card {
-      width: 100%;
-      max-width: 420px;
-      background-color: var(--md-surface-1);
-      border-radius: 28px;
-      padding: 40px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .auth-title {
-      font-family: "Poppins", sans-serif;
-      font-weight: 600;
-      font-size: 1.75rem;
-      text-align: center;
-      margin-bottom: 24px;
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-success {
-      background-color: var(--md-sys-color-secondary-container);
-      border: 1px solid var(--md-sys-color-secondary);
-      color: var(--md-sys-color-on-secondary-container);
-      padding: 12px 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
-    .auth-error {
-      background-color: var(--md-sys-color-error-container);
-      border: 1px solid var(--md-sys-color-error);
-      color: var(--md-sys-color-on-error-container);
-      padding: 12px 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
-    .auth-form-group {
-      margin-bottom: 20px;
-    }
-    .auth-label {
-      display: block;
-      font-weight: 500;
-      font-size: 0.9rem;
-      color: var(--md-sys-color-on-surface);
-      margin-bottom: 8px;
-    }
-    .auth-input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: 12px;
-      font-size: 1rem;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
-      background-color: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-input:focus {
-      outline: none;
-      border-color: var(--md-sys-color-primary);
-    }
-    .auth-input::placeholder {
-      color: var(--md-sys-color-on-surface-variant);
-    }
-    .auth-button {
-      width: 100%;
-      height: 48px;
-      background-color: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      border: none;
-      border-radius: 24px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .auth-button:hover {
-      background-color: var(--md-sys-color-on-primary-container);
-      box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
-    }
-    .auth-links {
-      margin-top: 20px;
-      text-align: center;
-    }
-    .auth-link {
-      color: var(--md-sys-color-primary);
-      font-size: 0.9rem;
-      text-decoration: none;
-    }
-    .auth-link:hover {
-      color: var(--md-sys-color-on-primary-container);
-    }
-  </style>
-</head>
-<body>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1 class="auth-title">Lupa Password</h1>
-      
-      <?php if (isset($message)): ?>
-        <div class="auth-success">
-          <?= htmlspecialchars($message) ?>
-        </div>
-      <?php endif; ?>
-      
-      <?php if (isset($error)): ?>
-        <div class="auth-error">
-          <?= htmlspecialchars($error) ?>
-        </div>
-      <?php endif; ?>
-      
-      <form method="POST" action="/password/forgot">
-        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-        
-        <div class="auth-form-group">
-          <label for="email" class="auth-label">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            class="auth-input"
-            placeholder="Masukkan email Anda"
-            required
-          >
-        </div>
-        
-        <button type="submit" class="auth-button">
-          Kirim Link Reset
-        </button>
-      </form>
-      
-      <div class="auth-links">
-        <a data-spa href="/login" class="auth-link">Kembali ke Login</a>
+<div class="auth-container">
+  <div class="auth-card">
+    <h1 class="auth-title">Lupa Password</h1>
+
+    <?php if (isset($message)): ?>
+      <div class="auth-success">
+        <?= htmlspecialchars($message) ?>
       </div>
+    <?php endif; ?>
+
+    <?php if (isset($error)): ?>
+      <div class="auth-error">
+        <?= htmlspecialchars($error) ?>
+      </div>
+    <?php endif; ?>
+
+    <form method="POST" action="/password/forgot">
+      <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+
+      <div class="auth-form-group">
+        <label for="email" class="auth-label">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          class="auth-input"
+          placeholder="Masukkan email Anda"
+          required>
+      </div>
+
+      <button type="submit" class="auth-button">
+        Kirim Link Reset
+      </button>
+    </form>
+
+    <div class="auth-links">
+      <a data-spa href="/login" class="auth-link">Kembali ke Login</a>
     </div>
   </div>
-</body>
-</html>
+</div>
 PHP;
 
-    file_put_contents("$viewsPath/password/forgot.php", $forgotView);
+    file_put_contents("$passwordDir/forgot.php", $forgotView);
 
     // Reset password view
     $resetView = <<<'PHP'
-<?php
-/**
- * @var \App\Core\View\PageMeta $meta
- */
-?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= $meta->title ?? 'Reset Password' ?></title>
-  <link rel="stylesheet" href="<?= asset('addon/Views/style.css') ?>">
-  <style>
-    .auth-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: var(--md-sys-color-background);
-      padding: 24px;
-    }
-    .auth-card {
-      width: 100%;
-      max-width: 420px;
-      background-color: var(--md-surface-1);
-      border-radius: 28px;
-      padding: 40px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .auth-title {
-      font-family: "Poppins", sans-serif;
-      font-weight: 600;
-      font-size: 1.75rem;
-      text-align: center;
-      margin-bottom: 24px;
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-error {
-      background-color: var(--md-sys-color-error-container);
-      border: 1px solid var(--md-sys-color-error);
-      color: var(--md-sys-color-on-error-container);
-      padding: 12px 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
-    .auth-form-group {
-      margin-bottom: 20px;
-    }
-    .auth-label {
-      display: block;
-      font-weight: 500;
-      font-size: 0.9rem;
-      color: var(--md-sys-color-on-surface);
-      margin-bottom: 8px;
-    }
-    .auth-input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: 12px;
-      font-size: 1rem;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
-      background-color: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-input:focus {
-      outline: none;
-      border-color: var(--md-sys-color-primary);
-    }
-    .auth-button {
-      width: 100%;
-      height: 48px;
-      background-color: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      border: none;
-      border-radius: 24px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .auth-button:hover {
-      background-color: var(--md-sys-color-on-primary-container);
-      box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
-    }
-    .auth-links {
-      margin-top: 20px;
-      text-align: center;
-    }
-    .auth-link {
-      color: var(--md-sys-color-primary);
-      font-size: 0.9rem;
-      text-decoration: none;
-    }
-    .auth-link:hover {
-      color: var(--md-sys-color-on-primary-container);
-    }
-  </style>
-</head>
-<body>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1 class="auth-title">Reset Password</h1>
-      
-      <?php if (isset($error)): ?>
-        <div class="auth-error">
-          <?= htmlspecialchars($error) ?>
-        </div>
-      <?php endif; ?>
-      
-      <form method="POST" action="/password/reset">
-        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-        
-        <div class="auth-form-group">
-          <label for="email" class="auth-label">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            class="auth-input"
-            required
-          >
-        </div>
-        
-        <div class="auth-form-group">
-          <label for="password" class="auth-label">Password Baru</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            class="auth-input"
-            minlength="8"
-            required
-          >
-        </div>
-        
-        <div class="auth-form-group">
-          <label for="password_confirmation" class="auth-label">Konfirmasi Password</label>
-          <input
-            type="password"
-            id="password_confirmation"
-            name="password_confirmation"
-            class="auth-input"
-            minlength="8"
-            required
-          >
-        </div>
-        
-        <button type="submit" class="auth-button">
-          Reset Password
-        </button>
-      </form>
-      
-      <div class="auth-links">
-        <a data-spa href="/login" class="auth-link">Kembali ke Login</a>
+<div class="auth-container">
+  <div class="auth-card">
+    <h1 class="auth-title">Reset Password</h1>
+
+    <?php if (isset($error)): ?>
+      <div class="auth-error">
+        <?= htmlspecialchars($error) ?>
       </div>
+    <?php endif; ?>
+
+    <form method="POST" action="/password/reset">
+      <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+
+      <div class="auth-form-group">
+        <label for="email" class="auth-label">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          class="auth-input"
+          required>
+      </div>
+
+      <div class="auth-form-group">
+        <label for="password" class="auth-label">Password Baru</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="auth-input"
+          minlength="8"
+          required>
+      </div>
+
+      <div class="auth-form-group">
+        <label for="password_confirmation" class="auth-label">Konfirmasi Password</label>
+        <input
+          type="password"
+          id="password_confirmation"
+          name="password_confirmation"
+          class="auth-input"
+          minlength="8"
+          required>
+      </div>
+
+      <button type="submit" class="auth-button">
+        Reset Password
+      </button>
+    </form>
+
+    <div class="auth-links">
+      <a data-spa href="/login" class="auth-link">Kembali ke Login</a>
     </div>
   </div>
-</body>
-</html>
+</div>
 PHP;
 
-    file_put_contents("$viewsPath/password/reset.php", $resetView);
+    file_put_contents("$passwordDir/reset.php", $resetView);
 
-    echo "   ✓ Views created (login, register, dashboard, forgot, reset)\n";
+    // Password style
+    $passwordStyle = <<<'CSS'
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--md-sys-color-background);
+  padding: 24px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--md-surface-1);
+  border-radius: 28px;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.auth-title {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 1.75rem;
+  text-align: center;
+  margin-bottom: 24px;
+  color: var(--md-sys-color-on-surface);
+}
+.auth-success {
+  background-color: var(--md-sys-color-secondary-container);
+  border: 1px solid var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary-container);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+.auth-error {
+  background-color: var(--md-sys-color-error-container);
+  border: 1px solid var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error-container);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+.auth-form-group {
+  margin-bottom: 20px;
+}
+.auth-label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 8px;
+}
+.auth-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+.auth-input:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+}
+.auth-input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.auth-button {
+  width: 100%;
+  height: 48px;
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.auth-button:hover {
+  background-color: var(--md-sys-color-on-primary-container);
+  box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
+}
+.auth-links {
+  margin-top: 20px;
+  text-align: center;
+}
+.auth-link {
+  color: var(--md-sys-color-primary);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.auth-link:hover {
+  color: var(--md-sys-color-on-primary-container);
+}
+CSS;
+
+    file_put_contents("$passwordDir/style.css", $passwordStyle);
+
+    echo "   ✓ Views created (auth/layout, auth/login, auth/register, auth/style, password/forgot, password/reset, password/style, dashboard/index, dashboard/style)\n";
   }
 
   private function printNextSteps(bool $withRole): void
