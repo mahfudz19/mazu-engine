@@ -13,98 +13,98 @@ use App\Services\ConfigService;
  */
 class SessionAuthSetupCommand implements CommandInterface
 {
-    public function __construct(
-        private Application $app,
-    ) {}
+  public function __construct(
+    private Application $app,
+  ) {}
 
-    private function getConfig(): ConfigService
-    {
-        return $this->app->getContainer()->resolve(ConfigService::class);
+  private function getConfig(): ConfigService
+  {
+    return $this->app->getContainer()->resolve(ConfigService::class);
+  }
+
+  public function getName(): string
+  {
+    return 'auth:session-setup';
+  }
+
+  public function getDescription(): string
+  {
+    return 'Setup session-based authentication (email/password) dengan email verification, avatar, dan password min 8';
+  }
+
+  public function handle(array $arguments): int
+  {
+    echo "\n🔐 Mazu Framework - Session Auth Setup\n\n";
+
+    // Parse arguments
+    [$dbConnection, $withRole] = $this->parseArguments($arguments);
+
+    echo "📦 Konfigurasi:\n";
+    echo "   - Database: {$dbConnection}\n";
+    echo "   - Role System: " . ($withRole ? 'Ya' : 'Tidak') . "\n";
+    echo "   - Email Verification: Ya (default)\n";
+    echo "   - Avatar Field: Ya (default)\n";
+    echo "   - Password Min Length: 8 (default)\n\n";
+
+    // Validate database connection
+    if (!$this->validateDbConnection($dbConnection)) {
+      echo "❌ Database connection '{$dbConnection}' tidak tersedia.\n";
+      echo "   Pastikan sudah dikonfigurasi di config/database.php\n\n";
+      return 1;
     }
 
-    public function getName(): string
-    {
-        return 'auth:session-setup';
+    // Start setup
+    echo "🚀 Memulai setup session authentication...\n\n";
+
+    $this->setupEnvPlaceholders();
+    $this->setupUserModel($dbConnection, $withRole);
+    $this->setupPasswordHelper();
+    $this->setupAuthController($withRole);
+    $this->setupAuthMiddleware($withRole);
+    $this->setupRoutes($withRole);
+    $this->setupViews();
+
+    echo "\n✅ Session authentication setup selesai!\n\n";
+    $this->printNextSteps($withRole);
+
+    return 0;
+  }
+
+  private function parseArguments(array $arguments): array
+  {
+    $dbConnection = 'mysql';
+    $withRole = false;
+
+    foreach ($arguments as $arg) {
+      if (str_starts_with($arg, '--db=')) {
+        $dbConnection = substr($arg, 5);
+      } elseif ($arg === '--with-role') {
+        $withRole = true;
+      }
     }
 
-    public function getDescription(): string
-    {
-        return 'Setup session-based authentication (email/password) dengan email verification, avatar, dan password min 8';
-    }
+    return [$dbConnection, $withRole];
+  }
 
-    public function handle(array $arguments): int
-    {
-        echo "\n🔐 Mazu Framework - Session Auth Setup\n\n";
+  private function validateDbConnection(string $connection): bool
+  {
+    $config = $this->getConfig();
+    $dbConfig = $config->get('database.connections', []);
 
-        // Parse arguments
-        [$dbConnection, $withRole] = $this->parseArguments($arguments);
+    return isset($dbConfig[$connection]);
+  }
 
-        echo "📦 Konfigurasi:\n";
-        echo "   - Database: {$dbConnection}\n";
-        echo "   - Role System: " . ($withRole ? 'Ya' : 'Tidak') . "\n";
-        echo "   - Email Verification: Ya (default)\n";
-        echo "   - Avatar Field: Ya (default)\n";
-        echo "   - Password Min Length: 8 (default)\n\n";
+  private function setupEnvPlaceholders(): void
+  {
+    echo "📝 Setup environment placeholders...\n";
 
-        // Validate database connection
-        if (!$this->validateDbConnection($dbConnection)) {
-            echo "❌ Database connection '{$dbConnection}' tidak tersedia.\n";
-            echo "   Pastikan sudah dikonfigurasi di config/database.php\n\n";
-            return 1;
-        }
+    $root = __DIR__ . '/../../..';
+    $envPath = $root . '/.env';
+    $envExamplePath = $root . '/.env.example';
 
-        // Start setup
-        echo "🚀 Memulai setup session authentication...\n\n";
-
-        $this->setupEnvPlaceholders();
-        $this->setupUserModel($dbConnection, $withRole);
-        $this->setupPasswordHelper();
-        $this->setupAuthController($withRole);
-        $this->setupAuthMiddleware($withRole);
-        $this->setupRoutes($withRole);
-        $this->setupViews();
-
-        echo "\n✅ Session authentication setup selesai!\n\n";
-        $this->printNextSteps($withRole);
-
-        return 0;
-    }
-
-    private function parseArguments(array $arguments): array
-    {
-        $dbConnection = 'mysql';
-        $withRole = false;
-
-        foreach ($arguments as $arg) {
-            if (str_starts_with($arg, '--db=')) {
-                $dbConnection = substr($arg, 5);
-            } elseif ($arg === '--with-role') {
-                $withRole = true;
-            }
-        }
-
-        return [$dbConnection, $withRole];
-    }
-
-    private function validateDbConnection(string $connection): bool
-    {
-        $config = $this->getConfig();
-        $dbConfig = $config->get('database.connections', []);
-
-        return isset($dbConfig[$connection]);
-    }
-
-    private function setupEnvPlaceholders(): void
-    {
-        echo "📝 Setup environment placeholders...\n";
-
-        $root = __DIR__ . '/../../..';
-        $envPath = $root . '/.env';
-        $envExamplePath = $root . '/.env.example';
-
-        // Create .env.example if not exists
-        if (!file_exists($envExamplePath)) {
-            $exampleContent = <<<'ENV'
+    // Create .env.example if not exists
+    if (!file_exists($envExamplePath)) {
+      $exampleContent = <<<'ENV'
 APP_NAME="Mazu Framework"
 APP_ENV=local
 APP_KEY=
@@ -122,33 +122,83 @@ SESSION_DRIVER=file
 SESSION_LIFETIME=120
 
 ENV;
-            file_put_contents($envExamplePath, $exampleContent);
-        }
-
-        // Create .env if not exists
-        if (!file_exists($envPath)) {
-            copy($envExamplePath, $envPath);
-        }
-
-        echo "   ✓ Environment files ready\n";
+      file_put_contents($envExamplePath, $exampleContent);
     }
 
-    private function setupUserModel(string $dbConnection, bool $withRole): void
-    {
-        echo "📦 Setup UserModel...\n";
+    // Create .env if not exists
+    if (!file_exists($envPath)) {
+      copy($envExamplePath, $envPath);
+    }
 
-        $root = __DIR__ . '/../../..';
-        $modelDir = $root . '/addon/Models';
-        $modelPath = $modelDir . '/UserModel.php';
+    echo "   ✓ Environment files ready\n";
+  }
 
-        if (!is_dir($modelDir)) {
-            mkdir($modelDir, 0755, true);
-        }
+  private function setupUserModel(string $dbConnection, bool $withRole): void
+  {
+    echo "📦 Setup UserModel...\n";
 
-        $roleSchema = $withRole ? "
-        'role' => ['type' => 'enum', 'values' => ['admin', 'approver'], 'nullable' => false, 'default' => 'approver']" : '';
+    $root = __DIR__ . '/../../..';
+    $modelDir = $root . '/addon/Models';
+    $modelPath = $modelDir . '/UserModel.php';
 
-        $template = <<<PHP
+    if (!is_dir($modelDir)) {
+      mkdir($modelDir, 0755, true);
+    }
+
+    $roleSchema = $withRole ? "
+        'role' => ['type' => 'enum', 'values' => ['super-admin', 'admin', 'user'], 'nullable' => false, 'default' => 'user']" : '';
+
+    $seedContent = $withRole ? "
+        [
+            'email' => 'superadmin@example.com',
+            'password' => 'password123',
+            'name' => 'Super Admin',
+            'avatar' => null,
+            'email_verified_at' => null,
+            'is_active' => 1,
+            'last_login_at' => null,
+            'role' => 'super-admin',
+        ],
+        [
+            'email' => 'admin@example.com',
+            'password' => 'password123',
+            'name' => 'Admin User',
+            'avatar' => null,
+            'email_verified_at' => null,
+            'is_active' => 1,
+            'last_login_at' => null,
+            'role' => 'admin',
+        ],
+        [
+            'email' => 'user@example.com',
+            'password' => 'password123',
+            'name' => 'Regular User',
+            'avatar' => null,
+            'email_verified_at' => null,
+            'is_active' => 1,
+            'last_login_at' => null,
+            'role' => 'user',
+        ]" : "
+        [
+            'email' => 'user1@example.com',
+            'password' => 'password123',
+            'name' => 'User 1',
+            'avatar' => null,
+            'email_verified_at' => null,
+            'is_active' => 1,
+            'last_login_at' => null,
+        ],
+        [
+            'email' => 'user2@example.com',
+            'password' => 'password123',
+            'name' => 'User 2',
+            'avatar' => null,
+            'email_verified_at' => null,
+            'is_active' => 1,
+            'last_login_at' => null,
+        ]";
+
+    $template = <<<PHP
 <?php
 
 namespace Addon\Models;
@@ -186,25 +236,7 @@ class UserModel extends Model
         'last_login_at' => ['type' => 'datetime', 'nullable' => true],{$roleSchema}
     ];
 
-    protected array \$seed = [
-        [
-            'email' => 'user@example.com',
-            'password' => 'password123',
-            'name' => 'Regular User',
-            'avatar' => null,
-            'email_verified_at' => null,
-            'is_active' => 1,
-            'last_login_at' => null,
-        ],
-        [
-            'email' => 'admin@example.com',
-            'password' => 'password123',
-            'name' => 'Admin User',
-            'avatar' => null,
-            'email_verified_at' => null,
-            'is_active' => 1,
-            'last_login_at' => null,
-        ],
+    protected array \$seed = [{$seedContent}
     ];
 
     /**
@@ -312,23 +344,23 @@ class UserModel extends Model
 }
 PHP;
 
-        file_put_contents($modelPath, $template);
-        echo "   ✓ UserModel created\n";
+    file_put_contents($modelPath, $template);
+    echo "   ✓ UserModel created\n";
+  }
+
+  private function setupPasswordHelper(): void
+  {
+    echo "🔑 Setup PasswordHelper...\n";
+
+    $root = __DIR__ . '/../../..';
+    $helperDir = $root . '/addon/Helpers';
+    $helperPath = $helperDir . '/PasswordHelper.php';
+
+    if (!is_dir($helperDir)) {
+      mkdir($helperDir, 0755, true);
     }
 
-    private function setupPasswordHelper(): void
-    {
-        echo "🔑 Setup PasswordHelper...\n";
-
-        $root = __DIR__ . '/../../..';
-        $helperDir = $root . '/addon/Helpers';
-        $helperPath = $helperDir . '/PasswordHelper.php';
-
-        if (!is_dir($helperDir)) {
-            mkdir($helperDir, 0755, true);
-        }
-
-        $template = <<<PHP
+    $template = <<<PHP
 <?php
 
 namespace App\Helpers;
@@ -401,33 +433,33 @@ class PasswordHelper
 }
 PHP;
 
-        file_put_contents($helperPath, $template);
-        echo "   ✓ PasswordHelper created\n";
+    file_put_contents($helperPath, $template);
+    echo "   ✓ PasswordHelper created\n";
+  }
+
+  private function setupAuthController(bool $withRole): void
+  {
+    echo "🎮 Setup AuthController...\n";
+
+    $root = __DIR__ . '/../../..';
+    $controllerDir = $root . '/addon/Controllers';
+    $controllerPath = $controllerDir . '/AuthController.php';
+
+    if (!is_dir($controllerDir)) {
+      mkdir($controllerDir, 0755, true);
     }
 
-    private function setupAuthController(bool $withRole): void
-    {
-        echo "🎮 Setup AuthController...\n";
-
-        $root = __DIR__ . '/../../..';
-        $controllerDir = $root . '/addon/Controllers';
-        $controllerPath = $controllerDir . '/AuthController.php';
-
-        if (!is_dir($controllerDir)) {
-            mkdir($controllerDir, 0755, true);
-        }
-
-        $roleHandling = $withRole ? <<<'PHP'
+    $roleHandling = $withRole ? <<<'PHP'
         // Role handling
-        $role = $request->input('role', 'approver');
-        if (!in_array($role, ['admin', 'approver'])) {
-            $role = 'approver';
+        $role = $request->input('role', 'user');
+        if (!in_array($role, ['super-admin', 'admin', 'user'])) {
+            $role = 'user';
         }
 PHP
-            : <<<'PHP'
+      : <<<'PHP'
 PHP;
 
-        $template = <<<PHP
+    $template = <<<PHP
 <?php
 
 namespace Addon\Controllers;
@@ -618,7 +650,7 @@ class AuthController
         ];
 
         if (isset(\$this->users->getSchema()['role'])) {
-            \$userData['role'] = \$role ?? 'approver';
+            \$userData['role'] = \$role ?? 'user';
         }
 
         // Insert user
@@ -757,25 +789,25 @@ class AuthController
 }
 PHP;
 
-        file_put_contents($controllerPath, $template);
-        echo "   ✓ AuthController created\n";
+    file_put_contents($controllerPath, $template);
+    echo "   ✓ AuthController created\n";
+  }
+
+  private function setupAuthMiddleware(bool $withRole): void
+  {
+    echo "🛡️ Setup Auth Middleware...\n";
+
+    $root = __DIR__ . '/../../..';
+    $middlewareDir = $root . '/addon/Middleware';
+
+    if (!is_dir($middlewareDir)) {
+      mkdir($middlewareDir, 0755, true);
     }
 
-    private function setupAuthMiddleware(bool $withRole): void
-    {
-        echo "🛡️ Setup Auth Middleware...\n";
+    // AuthMiddleware - Check if user is logged in
+    $authMiddlewarePath = $middlewareDir . '/AuthMiddleware.php';
 
-        $root = __DIR__ . '/../../..';
-        $middlewareDir = $root . '/addon/Middleware';
-
-        if (!is_dir($middlewareDir)) {
-            mkdir($middlewareDir, 0755, true);
-        }
-
-        // AuthMiddleware - Check if user is logged in
-        $authMiddlewarePath = $middlewareDir . '/AuthMiddleware.php';
-
-        $authTemplate = <<<'PHP'
+    $authTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -801,13 +833,13 @@ class AuthMiddleware implements MiddlewareInterface
 }
 PHP;
 
-        file_put_contents($authMiddlewarePath, $authTemplate);
-        echo "   ✓ AuthMiddleware created\n";
+    file_put_contents($authMiddlewarePath, $authTemplate);
+    echo "   ✓ AuthMiddleware created\n";
 
-        // GuestMiddleware - Redirect logged-in users from guest pages (alias: guest)
-        $guestMiddlewarePath = $root . '/addon/Middleware/GuestMiddleware.php';
+    // GuestMiddleware - Redirect logged-in users from guest pages (alias: guest)
+    $guestMiddlewarePath = $root . '/addon/Middleware/GuestMiddleware.php';
 
-        $guestTemplate = <<<'PHP'
+    $guestTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -833,13 +865,13 @@ class GuestMiddleware implements MiddlewareInterface
 }
 PHP;
 
-        file_put_contents($guestMiddlewarePath, $guestTemplate);
-        echo "   ✓ GuestMiddleware created\n";
+    file_put_contents($guestMiddlewarePath, $guestTemplate);
+    echo "   ✓ GuestMiddleware created\n";
 
-        // RedirectIfAuthenticatedMiddleware - Same as GuestMiddleware (alias: redirectifauthenticated)
-        $redirectMiddlewarePath = $root . '/addon/Middleware/RedirectIfAuthenticatedMiddleware.php';
+    // RedirectIfAuthenticatedMiddleware - Same as GuestMiddleware (alias: redirectifauthenticated)
+    $redirectMiddlewarePath = $root . '/addon/Middleware/RedirectIfAuthenticatedMiddleware.php';
 
-        $redirectTemplate = <<<'PHP'
+    $redirectTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -865,13 +897,13 @@ class RedirectIfAuthenticatedMiddleware implements MiddlewareInterface
 }
 PHP;
 
-        file_put_contents($redirectMiddlewarePath, $redirectTemplate);
-        echo "   ✓ RedirectIfAuthenticatedMiddleware created\n";
+    file_put_contents($redirectMiddlewarePath, $redirectTemplate);
+    echo "   ✓ RedirectIfAuthenticatedMiddleware created\n";
 
-        // EnsureEmailIsVerifiedMiddleware - Check if email is verified
-        $verifyMiddlewarePath = $root . '/addon/Middleware/EnsureEmailIsVerifiedMiddleware.php';
+    // EnsureEmailIsVerifiedMiddleware - Check if email is verified
+    $verifyMiddlewarePath = $root . '/addon/Middleware/EnsureEmailIsVerifiedMiddleware.php';
 
-        $verifyTemplate = <<<'PHP'
+    $verifyTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -912,14 +944,14 @@ class EnsureEmailIsVerifiedMiddleware implements MiddlewareInterface
 }
 PHP;
 
-        file_put_contents($verifyMiddlewarePath, $verifyTemplate);
-        echo "   ✓ EnsureEmailIsVerifiedMiddleware created\n";
+    file_put_contents($verifyMiddlewarePath, $verifyTemplate);
+    echo "   ✓ EnsureEmailIsVerifiedMiddleware created\n";
 
-        // RoleMiddleware - Only if --with-role is specified
-        if ($withRole) {
-            $roleMiddlewarePath = $root . '/addon/Middleware/RoleMiddleware.php';
+    // RoleMiddleware - Only if --with-role is specified
+    if ($withRole) {
+      $roleMiddlewarePath = $root . '/addon/Middleware/RoleMiddleware.php';
 
-            $roleTemplate = <<<'PHP'
+      $roleTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -948,20 +980,20 @@ class RoleMiddleware implements MiddlewareInterface
 }
 PHP;
 
-            file_put_contents($roleMiddlewarePath, $roleTemplate);
-            echo "   ✓ RoleMiddleware created\n";
-        }
+      file_put_contents($roleMiddlewarePath, $roleTemplate);
+      echo "   ✓ RoleMiddleware created\n";
     }
+  }
 
-    private function setupRoutes(bool $withRole): void
-    {
-        echo "🛣️ Setup Routes...\n";
+  private function setupRoutes(bool $withRole): void
+  {
+    echo "🛣️ Setup Routes...\n";
 
-        $root = __DIR__ . '/../../..';
-        $routerPath = $root . '/addon/Router/index.php';
+    $root = __DIR__ . '/../../..';
+    $routerPath = $root . '/addon/Router/index.php';
 
-        if ($withRole) {
-            $routes = <<<'PHP'
+    if ($withRole) {
+      $routes = <<<'PHP'
 <?php
 
 use App\Core\Http\Request;
@@ -1009,8 +1041,8 @@ $router->get('/', function (Request $request, Response $response) {
     return $response->redirect('/dashboard');
 });
 PHP;
-        } else {
-            $routes = <<<'PHP'
+    } else {
+      $routes = <<<'PHP'
 <?php
 
 use App\Core\Http\Request;
@@ -1058,33 +1090,33 @@ $router->get('/', function (Request $request, Response $response) {
     return $response->redirect('/dashboard');
 });
 PHP;
-        }
-
-        file_put_contents($routerPath, $routes);
-        echo "   ✓ Routes configured\n";
     }
 
-    private function setupViews(): void
-    {
-        echo "🎨 Setup Views...\n";
+    file_put_contents($routerPath, $routes);
+    echo "   ✓ Routes configured\n";
+  }
 
-        $root = __DIR__ . '/../../..';
-        $viewsPath = $root . '/addon/Views';
+  private function setupViews(): void
+  {
+    echo "🎨 Setup Views...\n";
 
-        // Create subdirectories for email and password views
-        $emailDir = $viewsPath . '/email';
-        $passwordDir = $viewsPath . '/password';
+    $root = __DIR__ . '/../../..';
+    $viewsPath = $root . '/addon/Views';
 
-        if (!is_dir($emailDir)) {
-            mkdir($emailDir, 0755, true);
-        }
+    // Create subdirectories for email and password views
+    $emailDir = $viewsPath . '/email';
+    $passwordDir = $viewsPath . '/password';
 
-        if (!is_dir($passwordDir)) {
-            mkdir($passwordDir, 0755, true);
-        }
+    if (!is_dir($emailDir)) {
+      mkdir($emailDir, 0755, true);
+    }
 
-        // Login view
-        $loginView = <<<'PHP'
+    if (!is_dir($passwordDir)) {
+      mkdir($passwordDir, 0755, true);
+    }
+
+    // Login view
+    $loginView = <<<'PHP'
 <?php
 /**
  * @var \App\Core\View\PageMeta $meta
@@ -1248,10 +1280,10 @@ PHP;
 </html>
 PHP;
 
-        file_put_contents("$viewsPath/login.php", $loginView);
+    file_put_contents("$viewsPath/login.php", $loginView);
 
-        // Register view
-        $registerView = <<<'PHP'
+    // Register view
+    $registerView = <<<'PHP'
 <?php
 /**
  * @var \App\Core\View\PageMeta $meta
@@ -1436,10 +1468,10 @@ PHP;
 </html>
 PHP;
 
-        file_put_contents("$viewsPath/register.php", $registerView);
+    file_put_contents("$viewsPath/register.php", $registerView);
 
-        // Dashboard view
-        $dashboardView = <<<'PHP'
+    // Dashboard view
+    $dashboardView = <<<'PHP'
 <?php
 /**
  * @var \App\Core\View\PageMeta $meta
@@ -1536,10 +1568,10 @@ PHP;
 </html>
 PHP;
 
-        file_put_contents("$viewsPath/dashboard.php", $dashboardView);
+    file_put_contents("$viewsPath/dashboard.php", $dashboardView);
 
-        // Email verify view
-        $verifyView = <<<'PHP'
+    // Email verify view
+    $verifyView = <<<'PHP'
 <?php
 /**
  * @var \App\Core\View\PageMeta $meta
@@ -1620,10 +1652,10 @@ PHP;
 </html>
 PHP;
 
-        file_put_contents("$viewsPath/email/verify.php", $verifyView);
+    file_put_contents("$viewsPath/email/verify.php", $verifyView);
 
-        // Forgot password view
-        $forgotView = <<<'PHP'
+    // Forgot password view
+    $forgotView = <<<'PHP'
 <?php
 /**
  * @var \App\Core\View\PageMeta $meta
@@ -1783,10 +1815,10 @@ PHP;
 </html>
 PHP;
 
-        file_put_contents("$viewsPath/password/forgot.php", $forgotView);
+    file_put_contents("$viewsPath/password/forgot.php", $forgotView);
 
-        // Reset password view
-        $resetView = <<<'PHP'
+    // Reset password view
+    $resetView = <<<'PHP'
 <?php
 /**
  * @var \App\Core\View\PageMeta $meta
@@ -1951,45 +1983,51 @@ PHP;
 </html>
 PHP;
 
-        file_put_contents("$viewsPath/password/reset.php", $resetView);
+    file_put_contents("$viewsPath/password/reset.php", $resetView);
 
-        echo "   ✓ Views created (login, register, dashboard, verify, forgot, reset)\n";
+    echo "   ✓ Views created (login, register, dashboard, verify, forgot, reset)\n";
+  }
+
+  private function printNextSteps(bool $withRole): void
+  {
+    echo "📋 Langkah Selanjutnya:\n\n";
+
+    echo "1. Jalankan migration untuk membuat tabel users:\n";
+    echo "   php mazu migrate\n\n";
+
+    echo "2. (Opsional) Seed data user:\n";
+    if ($withRole) {
+      echo "   - Super Admin: superadmin@example.com / password123\n";
+      echo "   - Admin: admin@example.com / password123\n";
+      echo "   - User: user@example.com / password123\n\n";
+    } else {
+      echo "   - User 1: user1@example.com / password123\n";
+      echo "   - User 2: user2@example.com / password123\n\n";
     }
 
-    private function printNextSteps(bool $withRole): void
-    {
-        echo "📋 Langkah Selanjutnya:\n\n";
-
-        echo "1. Jalankan migration untuk membuat tabel users:\n";
-        echo "   php mazu migrate\n\n";
-
-        echo "2. (Opsional) Seed data user:\n";
-        echo "   User: user@example.com / password123\n";
-        echo "   Admin: admin@example.com / password123\n\n";
-
-        if ($withRole) {
-            echo "3. Role system aktif. Middleware tersedia:\n";
-            echo "   - auth: Check if user is logged in\n";
-            echo "   - guest: Redirect if logged in\n";
-            echo "   - role:admin,role:super_admin: Check user role\n";
-            echo "   - email.verified: Check email verification\n\n";
-        } else {
-            echo "3. Middleware tersedia:\n";
-            echo "   - auth: Check if user is logged in\n";
-            echo "   - guest: Redirect if logged in\n";
-            echo "   - email.verified: Check email verification\n\n";
-        }
-
-        echo "4. Start server:\n";
-        echo "   php mazu serve\n\n";
-
-        echo "5. Akses aplikasi:\n";
-        echo "   http://localhost:8000/login\n";
-        echo "   http://localhost:8000/register\n\n";
+    if ($withRole) {
+      echo "3. Role system aktif. Middleware tersedia:\n";
+      echo "   - auth: Check if user is logged in\n";
+      echo "   - guest: Redirect if logged in\n";
+      echo "   - role:admin,role:super_admin: Check user role\n";
+      echo "   - email.verified: Check email verification\n\n";
+    } else {
+      echo "3. Middleware tersedia:\n";
+      echo "   - auth: Check if user is logged in\n";
+      echo "   - guest: Redirect if logged in\n";
+      echo "   - email.verified: Check email verification\n\n";
     }
 
-    private function info(string $message): void
-    {
-        echo "   ℹ️  {$message}\n";
-    }
+    echo "4. Start server:\n";
+    echo "   php mazu serve\n\n";
+
+    echo "5. Akses aplikasi:\n";
+    echo "   http://localhost:8000/login\n";
+    echo "   http://localhost:8000/register\n\n";
+  }
+
+  private function info(string $message): void
+  {
+    echo "   ℹ️  {$message}\n";
+  }
 }
