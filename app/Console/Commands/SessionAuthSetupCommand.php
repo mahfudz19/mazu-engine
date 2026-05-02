@@ -8,7 +8,7 @@ use App\Services\ConfigService;
 
 /**
  * Command untuk setup session-based authentication dengan email/password.
- * Secara default sudah termasuk: email verification, avatar field, password min 8.
+ * Secara default sudah termasuk: avatar field, password min 8.
  * Opsional: --with-role untuk menambahkan field role ke users table.
  */
 class SessionAuthSetupCommand implements CommandInterface
@@ -29,7 +29,7 @@ class SessionAuthSetupCommand implements CommandInterface
 
   public function getDescription(): string
   {
-    return 'Setup session-based authentication (email/password) dengan email verification, avatar, dan password min 8';
+    return 'Setup session-based authentication (email/password) dengan avatar, dan password min 8';
   }
 
   public function handle(array $arguments): int
@@ -42,7 +42,6 @@ class SessionAuthSetupCommand implements CommandInterface
     echo "📦 Konfigurasi:\n";
     echo "   - Database: {$dbConnection}\n";
     echo "   - Role System: " . ($withRole ? 'Ya' : 'Tidak') . "\n";
-    echo "   - Email Verification: Ya (default)\n";
     echo "   - Avatar Field: Ya (default)\n";
     echo "   - Password Min Length: 8 (default)\n\n";
 
@@ -150,49 +149,44 @@ ENV;
     $seedContent = $withRole ? "
         [
             'email' => 'superadmin@example.com',
-            'password' => 'password123',
+            'password' => '$2y$10\$XlyT7neGvzxYcZ5v.4gsP.QFqRq7UG8nNrJF1Bk4fiP/vQUCqXlDm', // password123
             'name' => 'Super Admin',
             'avatar' => null,
-            'email_verified_at' => null,
             'is_active' => 1,
             'last_login_at' => null,
             'role' => 'super-admin',
         ],
         [
             'email' => 'admin@example.com',
-            'password' => 'password123',
+            'password' => '$2y$10\$XlyT7neGvzxYcZ5v.4gsP.QFqRq7UG8nNrJF1Bk4fiP/vQUCqXlDm', // password123
             'name' => 'Admin User',
             'avatar' => null,
-            'email_verified_at' => null,
             'is_active' => 1,
             'last_login_at' => null,
             'role' => 'admin',
         ],
         [
             'email' => 'user@example.com',
-            'password' => 'password123',
+            'password' => '$2y$10\$XlyT7neGvzxYcZ5v.4gsP.QFqRq7UG8nNrJF1Bk4fiP/vQUCqXlDm', // password123
             'name' => 'Regular User',
             'avatar' => null,
-            'email_verified_at' => null,
             'is_active' => 1,
             'last_login_at' => null,
             'role' => 'user',
         ]" : "
         [
             'email' => 'user1@example.com',
-            'password' => 'password123',
+            'password' => '$2y$10\$XlyT7neGvzxYcZ5v.4gsP.QFqRq7UG8nNrJF1Bk4fiP/vQUCqXlDm', // password123
             'name' => 'User 1',
             'avatar' => null,
-            'email_verified_at' => null,
             'is_active' => 1,
             'last_login_at' => null,
         ],
         [
             'email' => 'user2@example.com',
-            'password' => 'password123',
+            'password' => '$2y$10\$XlyT7neGvzxYcZ5v.4gsP.QFqRq7UG8nNrJF1Bk4fiP/vQUCqXlDm', // password123
             'name' => 'User 2',
             'avatar' => null,
-            'email_verified_at' => null,
             'is_active' => 1,
             'last_login_at' => null,
         ]";
@@ -213,7 +207,6 @@ use App\Core\Database\Model;
  * - password: Hashed password (bcrypt)
  * - name: User full name
  * - avatar: Profile picture URL (nullable)
- * - email_verified_at: Email verification timestamp
  * - is_active: Account status
  * - last_login_at: Last login timestamp
  * - role: User role (if enabled)
@@ -230,7 +223,6 @@ class UserModel extends Model
         'password' => ['type' => 'string', 'nullable' => false],
         'name' => ['type' => 'string', 'nullable' => true],
         'avatar' => ['type' => 'string', 'nullable' => true],
-        'email_verified_at' => ['type' => 'datetime', 'nullable' => true],
         'is_active' => ['type' => 'boolean', 'nullable' => false, 'default' => true],
         'last_login_at' => ['type' => 'datetime', 'nullable' => true],{$roleSchema}
     ];
@@ -273,6 +265,47 @@ class UserModel extends Model
     }
 
     /**
+     * Create new user
+     *
+     * @param array \$data User data (email, password, name, avatar, role, etc.)
+     * @return int Last insert ID on success
+     * @throws \PDOException On database error
+     * @throws \Exception On unique constraint violation (email already exists)
+     */
+    public function create(array \$data): int
+    {
+        try {
+            // Filter data based on schema
+            \$validData = [];
+            foreach (\$data as \$key => \$value) {
+                if (isset(\$this->schema[\$key]) && \$key !== 'id') {
+                    \$validData[\$key] = \$value;
+                }
+            }
+
+            // Build columns and placeholders
+            \$columns = implode(', ', array_keys(\$validData));
+            \$placeholders = ':' . implode(', :', array_keys(\$validData));
+
+            // Build INSERT query
+            \$sql = "INSERT INTO {\$this->table} (\$columns) VALUES (\$placeholders)";
+
+            // Execute query
+            if (\$this->getDb()->query(\$sql, \$validData)) {
+                return (int) \$this->getDb()->lastInsertId();
+            }
+
+            throw new \PDOException('Gagal membuat user baru');
+        } catch (\PDOException \$e) {
+            // Check for duplicate entry (email already exists)
+            if (\$e->getCode() === '23000' || str_contains(\$e->getMessage(), 'Duplicate entry')) {
+                throw new \Exception('Email sudah terdaftar');
+            }
+            throw \$e;
+        }
+    }
+
+    /**
      * Update user by ID
      */
     public function updateById(string|int \$id, array \$data): bool
@@ -307,14 +340,6 @@ class UserModel extends Model
     }
 
     /**
-     * Mark email as verified
-     */
-    public function markEmailAsVerified(string|int \$id): bool
-    {
-        return \$this->updateById(\$id, ['email_verified_at' => date('Y-m-d H:i:s')]);
-    }
-
-    /**
      * Update last login timestamp
      */
     public function updateLastLogin(string|int \$id): bool
@@ -333,13 +358,6 @@ class UserModel extends Model
         return false;
     }
 
-    /**
-     * Check if user email is verified
-     */
-    public function isEmailVerified(array \$user): bool
-    {
-        return \$user['email_verified_at'] !== null;
-    }
 }
 PHP;
 
@@ -517,24 +535,24 @@ class AuthController
         \$password = \$request->input('password');
 
         if (!\$email || !\$password) {
-            return \$response->renderPage([], ['path' => '/login', 'meta' => ['title' => 'Login'], 'error' => 'Email dan password harus diisi']);
+            return \$response->redirect('/login?error=Email+dan+password+harus+diisi');
         }
 
         // Find user by email (returns array)
         \$user = \$this->users->findByEmail(\$email);
         
         if (!\$user) {
-            return \$response->renderPage([], ['path' => '/login', 'meta' => ['title' => 'Login'], 'error' => 'Email tidak ditemukan']);
+            return \$response->redirect('/login?error=Email+tidak+ditemukan');
         }
 
         // Verify password (access array property)
         if (!\$this->verifyPassword(\$password, \$user['password'])) {
-            return \$response->renderPage([], ['path' => '/login', 'meta' => ['title' => 'Login'], 'error' => 'Password salah']);
+            return \$response->redirect('/login?error=Password+salah');
         }
 
         // Check if user is active (access array property)
         if (!\$user['is_active']) {
-            return \$response->renderPage([], ['path' => '/login', 'meta' => ['title' => 'Login'], 'error' => 'Akun tidak aktif']);
+            return \$response->redirect('/login?error=Akun+tidak+aktif');
         }
 
         // Update last login (pass ID)
@@ -571,57 +589,56 @@ class AuthController
 
         // Validation
         if (!\$email || !\$password || !\$name) {
-            return \$response->renderPage([], ['path' => '/register', 'meta' => ['title' => 'Register'], 'error' => 'Semua field harus diisi']);
+            return \$response->redirect('/register?error=Semua+field+harus+diisi');
         }
 
         if (\$password !== \$passwordConfirmation) {
-            return \$response->renderPage([], ['path' => '/register', 'meta' => ['title' => 'Register'], 'error' => 'Password konfirmasi tidak cocok']);
+            return \$response->redirect('/register?error=Password+konfirmasi+tidak+cocok');
         }
 
         // Validate password strength
         \$passwordValidation = \$this->validatePassword(\$password);
         if (!\$passwordValidation['valid']) {
-            return \$response->renderPage([], ['path' => '/register', 'meta' => ['title' => 'Register'], 'error' => implode(', ', \$passwordValidation['errors'])]);
+            return \$response->redirect('/register?error=' . urlencode(implode(', ', \$passwordValidation['errors'])));
         }
 
-        // Check if email already exists (returns array)
-        \$existingUser = \$this->users->findByEmail(\$email);
-        if (\$existingUser) {
-            return \$response->renderPage([], ['path' => '/register', 'meta' => ['title' => 'Register'], 'error' => 'Email sudah terdaftar']);
+        // Role handling
+        \$role = \$request->input('role', 'user');
+        if (!in_array(\$role, ['super-admin', 'admin', 'user'])) {
+            \$role = 'user';
         }
 
-        {$roleHandling}
-
-        // Create user using direct SQL
-        \$now = date('Y-m-d H:i:s');
+        // Prepare user data
         \$userData = [
             'email' => \$email,
             'password' => \$this->hashPassword(\$password),
             'name' => \$name,
             'avatar' => null,
-            'email_verified_at' => null,
-            'is_active' => 1,
-            'last_login_at' => null,
-            'created_at' => \$now,
-            'updated_at' => \$now,
+            'is_active' => true,
         ];
 
+        // Add role if schema has role field
         if (isset(\$this->users->getSchema()['role'])) {
-            \$userData['role'] = \$role ?? 'user';
+            \$userData['role'] = \$role;
         }
 
-        // Insert user
-        \$columns = implode(', ', array_keys(\$userData));
-        \$placeholders = ':' . implode(', :', array_keys(\$userData));
-        \$sql = "INSERT INTO {\$this->users->getTableName()} (\$columns) VALUES (\$placeholders)";
-        \$this->users->getDb()->query(\$sql, \$userData);
+        // find user by email
+        \$existingUser = \$this->users->findByEmail(\$email);
+        if (\$existingUser) {
+            return \$response->redirect('/register?error=Email+sudah+terdaftar');
+        }
 
-        // Get the newly created user
-        \$newUser = \$this->users->findByEmail(\$email);
+        // Create user using model with try-catch
+        try {
+            \$userId = \$this->users->create(\$userData);
+            \$newUser = \$this->users->find(\$userId);
 
-        // Auto-login after register
-        if (\$newUser) {
-            \$this->loginSession(\$newUser);
+            // Auto-login after register
+            if (\$newUser) {
+                \$this->loginSession(\$newUser);
+            }
+        } catch (\Exception \$e) {
+            return \$response->redirect('/register?error=' . urlencode(\$e->getMessage()));
         }
 
         return \$response->redirect('/dashboard');
@@ -634,32 +651,6 @@ class AuthController
     {
         \$this->logoutSession();
         return \$response->redirect('/login');
-    }
-
-    /**
-     * Show email verification page
-     */
-    public function showVerifyEmail(Request \$request, Response \$response): View | RedirectResponse
-    {
-        return \$response->renderPage([], ['path' => '/email/verify', 'meta' => ['title' => 'Verifikasi Email | ' . env('APP_NAME')]]);
-    }
-
-    /**
-     * Verify email with token
-     */
-    public function verifyEmail(Request \$request, Response \$response): View | RedirectResponse
-    {
-        \$user = \$this->user();
-        
-        if (!\$user) {
-            return \$response->redirect('/login');
-        }
-
-        \$this->users->markEmailAsVerified(\$user['id']);
-
-        return \$response->renderPage([
-            'message' => 'Email Anda berhasil terverifikasi',
-        ], ['path' => '/email/verify', 'meta' => ['title' => 'Email Terverifikasi | ' . env('APP_NAME')]]);
     }
 
     /**
@@ -678,13 +669,13 @@ class AuthController
         \$email = \$request->input('email');
 
         if (!\$email) {
-            return \$response->renderPage([], ['path' => '/password/forgot', 'meta' => ['title' => 'Lupa Password'], 'error' => 'Email harus diisi']);
+            return \$response->renderPage([], ['path' => '/password/forgot?Email+harus+diisi', 'meta' => ['title' => 'Lupa Password']]);
         }
 
         \$user = \$this->users->findByEmail(\$email);
         
         if (!\$user) {
-            return \$response->renderPage([], ['path' => '/password/forgot', 'meta' => ['title' => 'Lupa Password'], 'error' => 'Email tidak ditemukan']);
+            return \$response->renderPage([], ['path' => '/password/forgot?Email+tidak+ditemukan', 'meta' => ['title' => 'Lupa Password']]);
         }
 
         // TODO: Generate reset token dan kirim email
@@ -722,19 +713,19 @@ class AuthController
         \$passwordConfirmation = \$request->input('password_confirmation');
 
         if (\$password !== \$passwordConfirmation) {
-            return \$response->renderPage([], ['path' => '/password/reset', 'meta' => ['title' => 'Reset Password'], 'error' => 'Password konfirmasi tidak cocok']);
+            return \$response->renderPage([], ['path' => '/password/reset?Password+konfirmasi+tidak+cocok', 'meta' => ['title' => 'Reset Password']]);
         }
 
         // Validate new password
         \$passwordValidation = \$this->validatePassword(\$password);
         if (!\$passwordValidation['valid']) {
-            return \$response->renderPage([], ['path' => '/password/reset', 'meta' => ['title' => 'Reset Password'], 'error' => implode(', ', \$passwordValidation['errors'])]);
+            return \$response->renderPage([], ['path' => '/password/reset?' . urlencode(implode(', ', \$passwordValidation['errors'])), 'meta' => ['title' => 'Reset Password']]);
         }
 
         \$user = \$this->users->findByEmail(\$email);
         
         if (!\$user) {
-            return \$response->renderPage([], ['path' => '/password/reset', 'meta' => ['title' => 'Reset Password'], 'error' => 'Email tidak ditemukan']);
+            return \$response->renderPage([], ['path' => '/password/reset?Email+tidak+ditemukan', 'meta' => ['title' => 'Reset Password']]);
         }
 
         \$this->users->updateById(\$user['id'], ['password' => \$this->hashPassword(\$password)]);
@@ -779,7 +770,7 @@ class AuthMiddleware implements MiddlewareInterface
 
     public function handle($request, \Closure $next, array $params = [])
     {
-        if ($this->session->get('logged_in') !== true) {
+        if ($this->session->get('is_logged_in') !== true) {
             $e = new AuthenticationException('Unauthenticated');
             $e->hardRedirect();
             throw $e;
@@ -811,7 +802,7 @@ class GuestMiddleware implements MiddlewareInterface
 
     public function handle($request, \Closure $next, array $params = [])
     {
-        if ($this->session->get('logged_in') === true) {
+        if ($this->session->get('is_logged_in') === true) {
             $e = new AuthorizationException('RedirectIfAuthenticated');
             $e->hardRedirect();
             throw $e;
@@ -824,85 +815,6 @@ PHP;
 
     file_put_contents($guestMiddlewarePath, $guestTemplate);
     echo "   ✓ GuestMiddleware created\n";
-
-    // RedirectIfAuthenticatedMiddleware - Same as GuestMiddleware (alias: redirectifauthenticated)
-    $redirectMiddlewarePath = $root . '/addon/Middleware/RedirectIfAuthenticatedMiddleware.php';
-
-    $redirectTemplate = <<<'PHP'
-<?php
-
-namespace Addon\Middleware;
-
-use App\Core\Interfaces\MiddlewareInterface;
-use App\Exceptions\AuthorizationException;
-use App\Services\SessionService;
-
-class RedirectIfAuthenticatedMiddleware implements MiddlewareInterface
-{
-    public function __construct(private SessionService $session) {}
-
-    public function handle($request, \Closure $next, array $params = [])
-    {
-        if ($this->session->get('logged_in') === true) {
-            $e = new AuthorizationException('RedirectIfAuthenticated');
-            $e->hardRedirect();
-            throw $e;
-        }
-
-        return $next($request);
-    }
-}
-PHP;
-
-    file_put_contents($redirectMiddlewarePath, $redirectTemplate);
-    echo "   ✓ RedirectIfAuthenticatedMiddleware created\n";
-
-    // EnsureEmailIsVerifiedMiddleware - Check if email is verified
-    $verifyMiddlewarePath = $root . '/addon/Middleware/EnsureEmailIsVerifiedMiddleware.php';
-
-    $verifyTemplate = <<<'PHP'
-<?php
-
-namespace Addon\Middleware;
-
-use Addon\Models\UserModel;
-use App\Core\Interfaces\MiddlewareInterface;
-use App\Core\Database\DatabaseManager;
-use App\Exceptions\AuthorizationException;
-use App\Services\SessionService;
-
-class EnsureEmailIsVerifiedMiddleware implements MiddlewareInterface
-{
-    public function __construct(
-        private SessionService $session,
-        private UserModel $user,
-    ) {}
-
-    public function handle($request, \Closure $next, array $params = [])
-    {
-        $userId = $this->session->get('auth.user_id');
-
-        if (!$userId) {
-            $e = new AuthorizationException('Unauthenticated');
-            $e->hardRedirect();
-            throw $e;
-        }
-
-        $user = $this->user->find($userId);
-
-        if (!$user || $user['email_verified_at'] === null) {
-            $e = new AuthorizationException('RedirectToEmailVerify');
-            $e->hardRedirect();
-            throw $e;
-        }
-
-        return $next($request);
-    }
-}
-PHP;
-
-    file_put_contents($verifyMiddlewarePath, $verifyTemplate);
-    echo "   ✓ EnsureEmailIsVerifiedMiddleware created\n";
 
     // RoleMiddleware - Only if --with-role is specified
     if ($withRole) {
@@ -986,11 +898,7 @@ $router->group(['middleware' => ['auth']], function () use ($router) {
     });
     
     // Logout
-    $router->get('/logout', [AuthController::class, 'logout']);
-    
-    // Email verification
-    $router->get('/email/verify', [AuthController::class, 'showVerifyEmail']);
-    $router->get('/email/verify/{id}', [AuthController::class, 'verifyEmail']);
+    $router->post('/logout', [AuthController::class, 'logout']);
 });
 
 // Home route
@@ -1035,11 +943,7 @@ $router->group(['middleware' => ['auth']], function () use ($router) {
     });
     
     // Logout
-    $router->get('/logout', [AuthController::class, 'logout']);
-    
-    // Email verification
-    $router->get('/email/verify', [AuthController::class, 'showVerifyEmail']);
-    $router->get('/email/verify/{id}', [AuthController::class, 'verifyEmail']);
+    $router->post('/logout', [AuthController::class, 'logout']);
 });
 
 // Home route
@@ -1060,13 +964,8 @@ PHP;
     $root = __DIR__ . '/../../..';
     $viewsPath = $root . '/addon/Views';
 
-    // Create subdirectories for email and password views
-    $emailDir = $viewsPath . '/email';
+    // Create subdirectory for password views
     $passwordDir = $viewsPath . '/password';
-
-    if (!is_dir($emailDir)) {
-      mkdir($emailDir, 0755, true);
-    }
 
     if (!is_dir($passwordDir)) {
       mkdir($passwordDir, 0755, true);
@@ -1511,7 +1410,9 @@ PHP;
     <h1 class="dashboard-title">Dashboard</h1>
     <div class="dashboard-user">
       <span class="dashboard-user-name">Halo, User!</span>
-      <a data-spa href="/logout" class="dashboard-logout">Logout</a>
+      <form method="POST" data-spa action="/logout">
+        <button class="dashboard-logout">Logout</button>
+      </form>
     </div>
   </nav>
   
@@ -1526,90 +1427,6 @@ PHP;
 PHP;
 
     file_put_contents("$viewsPath/dashboard.php", $dashboardView);
-
-    // Email verify view
-    $verifyView = <<<'PHP'
-<?php
-/**
- * @var \App\Core\View\PageMeta $meta
- */
-?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= $meta->title ?? 'Verifikasi Email' ?></title>
-  <link rel="stylesheet" href="<?= asset('addon/Views/style.css') ?>">
-  <style>
-    .auth-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: var(--md-sys-color-background);
-      padding: 24px;
-    }
-    .auth-card {
-      width: 100%;
-      max-width: 420px;
-      background-color: var(--md-surface-1);
-      border-radius: 28px;
-      padding: 40px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      text-align: center;
-    }
-    .auth-title {
-      font-family: "Poppins", sans-serif;
-      font-weight: 600;
-      font-size: 1.75rem;
-      margin-bottom: 16px;
-      color: var(--md-sys-color-on-surface);
-    }
-    .auth-message {
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 1rem;
-      line-height: 1.6;
-      margin-bottom: 24px;
-    }
-    .auth-button {
-      width: 100%;
-      height: 48px;
-      background-color: var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      border: none;
-      border-radius: 24px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .auth-button:hover {
-      background-color: var(--md-sys-color-on-primary-container);
-      box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
-    }
-  </style>
-</head>
-<body>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1 class="auth-title">Verifikasi Email</h1>
-      <p class="auth-message">
-        Silakan cek email Anda untuk link verifikasi.
-      </p>
-      <form method="POST" action="/email/verify">
-        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-        <button type="submit" class="auth-button">
-          Kirim Ulang Email Verifikasi
-        </button>
-      </form>
-    </div>
-  </div>
-</body>
-</html>
-PHP;
-
-    file_put_contents("$viewsPath/email/verify.php", $verifyView);
 
     // Forgot password view
     $forgotView = <<<'PHP'
@@ -1942,7 +1759,7 @@ PHP;
 
     file_put_contents("$viewsPath/password/reset.php", $resetView);
 
-    echo "   ✓ Views created (login, register, dashboard, verify, forgot, reset)\n";
+    echo "   ✓ Views created (login, register, dashboard, forgot, reset)\n";
   }
 
   private function printNextSteps(bool $withRole): void
@@ -1966,13 +1783,11 @@ PHP;
       echo "3. Role system aktif. Middleware tersedia:\n";
       echo "   - auth: Check if user is logged in\n";
       echo "   - guest: Redirect if logged in\n";
-      echo "   - role:admin,role:super_admin: Check user role\n";
-      echo "   - email.verified: Check email verification\n\n";
+      echo "   - role:admin,role:super_admin: Check user role\n\n";
     } else {
       echo "3. Middleware tersedia:\n";
       echo "   - auth: Check if user is logged in\n";
-      echo "   - guest: Redirect if logged in\n";
-      echo "   - email.verified: Check email verification\n\n";
+      echo "   - guest: Redirect if logged in\n\n";
     }
 
     echo "4. Start server:\n";

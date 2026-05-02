@@ -16,7 +16,7 @@ class RedirectResponse extends Response
     if (preg_match('#^https?://#i', $url)) {
       $this->targetUrl = $url;
     } else {
-      $this->targetUrl = getBaseUrl($url);
+      $this->targetUrl = !empty(getBaseUrl($url)) ? getBaseUrl($url) : '/';
     }
 
     // Teruskan container ke parent constructor
