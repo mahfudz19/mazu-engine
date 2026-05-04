@@ -108,22 +108,137 @@ class SessionAuthSetupCommand implements CommandInterface
         // Create .env.example if not exists
         if (!file_exists($envExamplePath)) {
             $exampleContent = <<<'ENV'
+# =============================================================================
+# MAZU FRAMEWORK - ENVIRONMENT CONFIGURATION
+# =============================================================================
+# Hybrid Authentication System: Google OAuth + Manual Registration with OTP
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# APPLICATION CONFIGURATION
+# -----------------------------------------------------------------------------
 APP_NAME="Mazu Framework"
+APP_TIMEZONE=Asia/Makassar
 APP_ENV=local
 APP_KEY=
 APP_DEBUG=true
-APP_URL=http://localhost
+APP_URL=http://localhost:8000
 
+# -----------------------------------------------------------------------------
+# DATABASE CONFIGURATION
+# -----------------------------------------------------------------------------
+# Default database connection for the application
+# Supported: mysql, pgsql, sqlite
 DB_CONNECTION=mysql
+
+# MySQL connection settings
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=mazu_framework
 DB_USERNAME=root
 DB_PASSWORD=
 
+# -----------------------------------------------------------------------------
+# SESSION CONFIGURATION
+# -----------------------------------------------------------------------------
+# Session driver: file, database, redis
 SESSION_DRIVER=file
+
+# Session lifetime in minutes
 SESSION_LIFETIME=120
 
+# -----------------------------------------------------------------------------
+# EMAIL CONFIGURATION (Gmail SMTP Relay)
+# -----------------------------------------------------------------------------
+# Required for: OTP verification, login notifications, password reset
+#
+# This system uses Gmail SMTP Relay for sending transactional emails.
+# To configure email sending, you need a Google Workspace account with
+# an institutional domain (e.g., @yourdomain.ac.id).
+#
+# STEP-BY-STEP: Get Gmail App Password
+# -------------------------------------
+# 1. Enable Two-Factor Authentication (2FA):
+#    - Go to: https://myaccount.google.com/security
+#    - Enable "2-Step Verification"
+#
+# 2. Generate App Password:
+#    - Go to: https://myaccount.google.com/apppasswords
+#    - Select "Mail" and your device
+#    - Click "Generate"
+#    - Copy the 16-digit password (e.g., "abcd efgh ijkl mnop")
+#    - Remove spaces when using: "abcdefghijklmnop"
+#
+# 3. Update environment variables:
+#    - MAIL_USERNAME: Your institutional email
+#    - MAIL_PASSWORD: The 16-digit app password (no spaces)
+#    - MAIL_FROM_ADDRESS: Same as MAIL_USERNAME
+#
+# NOTES:
+# - Use STARTTLS encryption (port 587)
+# - Do NOT use your regular Gmail password
+# - App passwords are only shown once - save it securely
+# -----------------------------------------------------------------------------
+MAIL_HOST=smtp-relay.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=noreply@yourdomain.com
+MAIL_PASSWORD=your-16-digit-app-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@yourdomain.com
+MAIL_FROM_NAME="${APP_NAME}"
+
+# -----------------------------------------------------------------------------
+# GOOGLE OAUTH 2.0 CONFIGURATION
+# -----------------------------------------------------------------------------
+# Required for: Google OAuth login/registration (one-click signup)
+#
+# This system allows users to register/login using their Google account.
+# Users with institutional domain emails (e.g., @yourdomain.ac.id) can
+# skip OTP verification when signing up with Google.
+#
+# STEP-BY-STEP: Get Google OAuth Credentials
+# ------------------------------------------
+# 1. Go to Google Cloud Console:
+#    https://console.cloud.google.com/apis/credentials
+#
+# 2. Create a new OAuth 2.0 Client ID:
+#    - Click "Create Credentials" > "OAuth client ID"
+#    - Application type: "Web application"
+#    - Name: "Mazu Framework Auth"
+#
+# 3. Configure Authorized Redirect URIs:
+#    - Add: http://localhost:8000/auth/callback (development)
+#    - Add: https://yourdomain.com/auth/callback (production)
+#    - Click "Create"
+#
+# 4. Copy your credentials:
+#    - Client ID: A long string ending with .apps.googleusercontent.com
+#    - Client Secret: Click the download icon or copy from console
+#
+# 5. Configure Google Workspace (if using institutional domain):
+#    - Go to: https://admin.google.com/ac/owl/domainwidedelegation
+#    - Enable domain-wide delegation for your OAuth client
+#    - Add scope: https://www.googleapis.com/auth/userinfo.email
+#
+# 6. Update environment variables:
+#    - GOOGLE_CLIENT_ID: Your OAuth Client ID
+#    - GOOGLE_CLIENT_SECRET: Your OAuth Client Secret
+#    - GOOGLE_REDIRECT_URI: Your callback URL
+#    - GOOGLE_ALLOWED_DOMAIN: @yourdomain.ac.id (optional, for domain restriction)
+#
+# NOTES:
+# - Keep your Client Secret secure - never commit to version control
+# - Users outside GOOGLE_ALLOWED_DOMAIN can still register manually with OTP
+# - Google OAuth registration does NOT require OTP verification
+# -----------------------------------------------------------------------------
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/callback
+GOOGLE_ALLOWED_DOMAIN=@yourdomain.com
+
+# -----------------------------------------------------------------------------
+# END OF CONFIGURATION
+# -----------------------------------------------------------------------------
 ENV;
             file_put_contents($envExamplePath, $exampleContent);
         }
