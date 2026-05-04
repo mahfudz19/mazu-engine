@@ -1457,6 +1457,20 @@ PHP
             : <<<'PHP'
 PHP;
 
+        $roleUserData = $withRole ? <<<'PHP'
+// Add role to user data
+        $userData['role'] = $role;
+PHP
+            : <<<'PHP'
+PHP;
+
+        $roleGoogleUserData = $withRole ? <<<'PHP'
+// Add role to Google OAuth user data
+        $userData['role'] = 'user';
+PHP
+            : <<<'PHP'
+PHP;
+
         $template = <<<PHP
 <?php
 
@@ -1709,10 +1723,7 @@ class AuthController
             'is_active' => 0, // Not active until OTP verified
         ];
 
-        // Add role if schema has role field
-        if (isset(\$this->users->getSchema()['role'])) {
-            \$userData['role'] = \$role;
-        }
+        {$roleUserData}
 
         // Create user with try-catch
         try {
@@ -1916,10 +1927,7 @@ class AuthController
                     'avatar_url' => \$googleUser->picture,
                 ];
 
-                // Add role if schema has role field
-                if (isset(\$this->users->getSchema()['role'])) {
-                    \$userData['role'] = 'user';
-                }
+                {$roleGoogleUserData}
 
                 \$userId = \$this->users->create(\$userData);
                 \$newUser = \$this->users->find(\$userId);
