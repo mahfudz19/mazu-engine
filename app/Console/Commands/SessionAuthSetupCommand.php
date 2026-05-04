@@ -57,6 +57,9 @@ class SessionAuthSetupCommand implements CommandInterface
 
         $this->setupEnvPlaceholders();
         $this->setupUserModel($dbConnection, $withRole);
+        $this->setupEmailVerificationModel($dbConnection);
+        $this->setupPasswordResetTokenModel($dbConnection);
+        $this->setupLoginNotificationModel($dbConnection);
         $this->setupOtpGenerator();
         $this->setupEmailService();
         $this->setupAuthController($withRole);
@@ -845,6 +848,476 @@ PHP;
 
         file_put_contents($servicePath, $template);
         echo "   ✓ EmailService created\n";
+    }
+
+    private function setupEmailVerificationModel(string $dbConnection): void
+    {
+        echo "📧 Setup EmailVerificationModel...\n";
+
+        $root = __DIR__ . '/../../..';
+        $modelsDir = $root . '/addon/Models';
+        $modelPath = $modelsDir . '/EmailVerificationModel.php';
+
+        if (!is_dir($modelsDir)) {
+            mkdir($modelsDir, 0755, true);
+        }
+
+        $template = <<<'PHP'
+<?php
+
+namespace Addon\Models;
+
+use App\Core\Database\Model;
+
+class EmailVerificationModel extends Model
+{
+    protected ?string $connection = 'mysql';
+    protected string $table = 'email_verifications';
+    protected bool $timestamps = true;
+
+    protected array $schema = [
+        'id' => ['type' => 'id', 'primary' => true, 'auto_increment' => true],
+        'user_id' => ['type' => 'bigint', 'foreign' => 'users.id', 'unsigned' => true],
+        'email' => ['type' => 'varchar', 'length' => 255],
+        'otp_code' => ['type' => 'varchar', 'length' => 6],
+        'expires_at' => ['type' => 'datetime'],
+        'used_at' => ['type' => 'datetime', 'nullable' => true],
+    ];
+
+    protected array $seed = [];
+
+    /**
+     * Buat OTP verification baru untuk user
+     */
+    public function createOtp(int $userId, string $email, string $otpCode, int $expiresInMinutes = 15): int
+    {
+        $expiresAt = date('Y-m-d H:i:s', strtotime("+{$expiresInMinutes} minutes"));
+
+        $this->db->query(
+            "INSERT INTO {$this->table} (user_id, email, otp_code, expires_at) VALUES (:user_id, :email, :otp_code, :expires_at)",
+            [
+                ':user_id' => $userId,
+                ':email' => $email,
+                ':otp_code' => $otpCode,
+                ':expires_at' => $expiresAt,
+            ]
+        );
+
+        return $this->db->lastInsertId();
+    }
+
+    /**
+     * Verifikasi OTP code
+     *
+     * @return array ['valid' => bool, 'message' => string]
+     */
+    public function verifyOtp(int $userId, string $otpCode): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table}
+             WHERE user_id = :user_id
+             AND otp_code = :otp_code
+             AND used_at IS NULL
+             AND expires_at > NOW()
+             ORDER BY created_at DESC LIMIT 1"
+        );
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':otp_code' => $otpCode,
+        ]);
+
+        $verification = $stmt->fetch();
+
+        if (!$verification) {
+            return ['valid' => false, 'message' => 'Kode OTP tidak valid atau telah kedaluwarsa'];
+        }
+
+        // Mark as used
+        $this->markAsUsed($verification['id']);
+
+        return ['valid' => true, 'message' => 'Email berhasil diverifikasi'];
+    }
+
+    /**
+     * Tandai OTP sebagai sudah digunakan
+     */
+    private function markAsUsed(int $id): bool
+    {
+        return $this->db->query(
+            "UPDATE {$this->table} SET used_at = NOW() WHERE id = :id",
+            [':id' => $id]
+        );
+    }
+
+    /**
+     * Hapus OTP yang sudah kedaluwarsa untuk user
+     */
+    public function deleteExpired(int $userId): int
+    {
+        $stmt = $this->db->prepare(
+            "DELETE FROM {$this->table} WHERE user_id = :user_id AND expires_at < NOW()"
+        );
+        $stmt->execute([':user_id' => $userId]);
+
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Cek apakah user masih memiliki OTP yang aktif
+     */
+    public function hasActiveOtp(int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) as count FROM {$this->table}
+             WHERE user_id = :user_id
+             AND used_at IS NULL
+             AND expires_at > NOW()"
+        );
+        $stmt->execute([':user_id' => $userId]);
+
+        $result = $stmt->fetch();
+        return $result['count'] > 0;
+    }
+
+    /**
+     * Invalidate semua OTP untuk user (misal setelah berhasil verifikasi)
+     */
+    public function invalidateAll(int $userId): bool
+    {
+        return $this->db->query(
+            "UPDATE {$this->table} SET used_at = NOW() WHERE user_id = :user_id AND used_at IS NULL",
+            [':user_id' => $userId]
+        );
+    }
+}
+PHP;
+
+        file_put_contents($modelPath, $template);
+        echo "   ✓ EmailVerificationModel created\n";
+    }
+
+    private function setupLoginNotificationModel(string $dbConnection): void
+    {
+        echo "🔔 Setup LoginNotificationModel...\n";
+
+        $root = __DIR__ . '/../../..';
+        $modelsDir = $root . '/addon/Models';
+        $modelPath = $modelsDir . '/LoginNotificationModel.php';
+
+        if (!is_dir($modelsDir)) {
+            mkdir($modelsDir, 0755, true);
+        }
+
+        $template = <<<'PHP'
+<?php
+
+namespace Addon\Models;
+
+use App\Core\Database\Model;
+
+/**
+ * Login Notification Model
+ *
+ * Mencatat setiap login user dan mengirim notifikasi email.
+ * Berguna untuk keamanan - user akan tahu jika ada login mencurigakan.
+ */
+class LoginNotificationModel extends Model
+{
+    protected ?string $connection = 'mysql';
+    protected string $table = 'login_notifications';
+    protected bool $timestamps = true;
+
+    protected array $schema = [
+        'id' => ['type' => 'id', 'primary' => true, 'auto_increment' => true],
+        'user_id' => ['type' => 'bigint', 'foreign' => 'users.id', 'unsigned' => true],
+        'email_sent_to' => ['type' => 'varchar', 'length' => 255],
+        'ip_address' => ['type' => 'varchar', 'length' => 45],
+        'user_agent' => ['type' => 'text'],
+        'login_at' => ['type' => 'datetime'],
+    ];
+
+    protected array $seed = [];
+
+    /**
+     * Catat login baru dan kirim notifikasi
+     *
+     * @param int $userId User ID
+     * @param string $email Email tujuan notifikasi
+     * @param string|null $ipAddress IP address user
+     * @param string|null $userAgent User agent browser
+     * @param string|null $loginAt Timestamp login (default: now)
+     * @return int Last insert ID
+     */
+    public function logLogin(
+        int $userId,
+        string $email,
+        ?string $ipAddress = null,
+        ?string $userAgent = null,
+        ?string $loginAt = null
+    ): int {
+        $loginAt = $loginAt ?? date('Y-m-d H:i:s');
+
+        $this->db->query(
+            "INSERT INTO {$this->table} (user_id, email_sent_to, ip_address, user_agent, login_at)
+             VALUES (:user_id, :email_sent_to, :ip_address, :user_agent, :login_at)",
+            [
+                ':user_id' => $userId,
+                ':email_sent_to' => $email,
+                ':ip_address' => $ipAddress,
+                ':user_agent' => $userAgent,
+                ':login_at' => $loginAt,
+            ]
+        );
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
+     * Dapatkan riwayat login user
+     *
+     * @param int $userId User ID
+     * @param int $limit Jumlah record maksimal
+     * @return array[] List of login records
+     */
+    public function getUserLogins(int $userId, int $limit = 10): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table}
+             WHERE user_id = :user_id
+             ORDER BY login_at DESC
+             LIMIT :limit"
+        );
+        $stmt->bindValue(':user_id', $userId, \PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Dapatkan login terakhir user
+     *
+     * @param int $userId User ID
+     * @return array|null Last login record or null
+     */
+    public function getLastLogin(int $userId): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table}
+             WHERE user_id = :user_id
+             ORDER BY login_at DESC
+             LIMIT 1"
+        );
+        $stmt->execute([':user_id' => $userId]);
+
+        $result = $stmt->fetch();
+        return $result === false ? null : $result;
+    }
+
+    /**
+     * Dapatkan login mencurigakan (IP berbeda dari biasanya)
+     *
+     * @param int $userId User ID
+     * @param int $limit Jumlah record maksimal
+     * @return array[] List of suspicious login records
+     */
+    public function getSuspiciousLogins(int $userId, int $limit = 5): array
+    {
+        // Get most common IP for this user
+        $stmt = $this->db->prepare(
+            "SELECT ip_address, COUNT(*) as count FROM {$this->table}
+             WHERE user_id = :user_id
+             GROUP BY ip_address
+             ORDER BY count DESC
+             LIMIT 1"
+        );
+        $stmt->execute([':user_id' => $userId]);
+        $commonIp = $stmt->fetch();
+
+        if (!$commonIp || !$commonIp['ip_address']) {
+            return [];
+        }
+
+        // Get logins from different IPs
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table}
+             WHERE user_id = :user_id
+             AND ip_address != :ip_address
+             ORDER BY login_at DESC
+             LIMIT :limit"
+        );
+        $stmt->bindValue(':user_id', $userId, \PDO::PARAM_INT);
+        $stmt->bindValue(':ip_address', $commonIp['ip_address']);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Hapus log lama (lebih dari 90 hari)
+     *
+     * @return int Jumlah record yang dihapus
+     */
+    public function deleteOldLogs(): int
+    {
+        $stmt = $this->db->prepare(
+            "DELETE FROM {$this->table} WHERE login_at < DATE_SUB(NOW(), INTERVAL 90 DAY)"
+        );
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
+}
+PHP;
+
+        file_put_contents($modelPath, $template);
+        echo "   ✓ LoginNotificationModel created\n";
+    }
+
+    private function setupPasswordResetTokenModel(string $dbConnection): void
+    {
+        echo "🔑 Setup PasswordResetTokenModel...\n";
+
+        $root = __DIR__ . '/../../..';
+        $modelsDir = $root . '/addon/Models';
+        $modelPath = $modelsDir . '/PasswordResetTokenModel.php';
+
+        if (!is_dir($modelsDir)) {
+            mkdir($modelsDir, 0755, true);
+        }
+
+        $template = <<<'PHP'
+<?php
+
+namespace Addon\Models;
+
+use App\Core\Database\Model;
+
+/**
+ * Password Reset Token Model
+ *
+ * Mengelola token untuk password reset.
+ * Token berlaku selama 1 jam dan hanya bisa dipakai sekali.
+ */
+class PasswordResetTokenModel extends Model
+{
+    protected ?string $connection = 'mysql';
+    protected string $table = 'password_reset_tokens';
+    protected bool $timestamps = true;
+
+    protected array $schema = [
+        'id' => ['type' => 'id', 'primary' => true, 'auto_increment' => true],
+        'user_id' => ['type' => 'bigint', 'foreign' => 'users.id', 'unsigned' => true],
+        'token' => ['type' => 'varchar', 'length' => 64],
+        'expires_at' => ['type' => 'datetime'],
+        'used_at' => ['type' => 'datetime', 'nullable' => true],
+    ];
+
+    protected array $seed = [];
+
+    /**
+     * Buat token reset password baru
+     *
+     * @param int $userId User ID
+     * @param string $token 64-character random token
+     * @param int $expiresInMinutes Durasi kedaluwarsa (default: 60 menit)
+     * @return int Last insert ID
+     */
+    public function createToken(int $userId, string $token, int $expiresInMinutes = 60): int
+    {
+        $expiresAt = date('Y-m-d H:i:s', strtotime("+{$expiresInMinutes} minutes"));
+
+        $this->db->query(
+            "INSERT INTO {$this->table} (user_id, token, expires_at) VALUES (:user_id, :token, :expires_at)",
+            [
+                ':user_id' => $userId,
+                ':token' => $token,
+                ':expires_at' => $expiresAt,
+            ]
+        );
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
+     * Temukan token yang valid
+     *
+     * @param string $token Token yang dicari
+     * @return array|null Data token jika valid, null jika tidak
+     */
+    public function findValidToken(string $token): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table}
+             WHERE token = :token
+             AND used_at IS NULL
+             AND expires_at > NOW()
+             ORDER BY created_at DESC LIMIT 1"
+        );
+        $stmt->execute([':token' => $token]);
+
+        $result = $stmt->fetch();
+        return $result === false ? null : $result;
+    }
+
+    /**
+     * Tandai token sebagai sudah digunakan
+     *
+     * @param int $id Token ID
+     * @return bool Success status
+     */
+    public function markAsUsed(int $id): bool
+    {
+        return $this->db->query(
+            "UPDATE {$this->table} SET used_at = NOW() WHERE id = :id",
+            [':id' => $id]
+        );
+    }
+
+    /**
+     * Invalidate semua token untuk user (misal setelah reset password berhasil)
+     *
+     * @param int $userId User ID
+     * @return bool Success status
+     */
+    public function invalidateAll(int $userId): bool
+    {
+        return $this->db->query(
+            "UPDATE {$this->table} SET used_at = NOW() WHERE user_id = :user_id AND used_at IS NULL",
+            [':user_id' => $userId]
+        );
+    }
+
+    /**
+     * Hapus token yang sudah kedaluwarsa
+     *
+     * @return int Jumlah token yang dihapus
+     */
+    public function deleteExpired(): int
+    {
+        $stmt = $this->db->prepare(
+            "DELETE FROM {$this->table} WHERE expires_at < NOW()"
+        );
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Generate random token 64 karakter
+     *
+     * @return string 64-character random hex string
+     */
+    public function generateToken(): string
+    {
+        return bin2hex(random_bytes(32));
+    }
+}
+PHP;
+
+        file_put_contents($modelPath, $template);
+        echo "   ✓ PasswordResetTokenModel created\n";
     }
 
     private function setupAuthController(bool $withRole): void
