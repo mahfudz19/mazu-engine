@@ -341,7 +341,6 @@ class AuthController
         // Activate user account
         $this->users->updateById($user['id'], [
             'is_active' => 1,
-            'email_verified_at' => date('Y-m-d H:i:s'),
         ]);
 
         // Invalidate all other OTPs
@@ -553,24 +552,22 @@ class AuthController
         $email = $request->input('email');
 
         if (!$email) {
-            return $response->renderPage([], ['path' => '/password/forgot?Email+harus+diisi', 'meta' => ['title' => 'Lupa Password']]);
+            return $response->redirect('/password/forgot?Email+harus+diisi');
         }
 
         $user = $this->users->findByEmail($email);
 
         if (!$user) {
             // For security, show same success message even if email not found
-            return $response->renderPage([
-                'message' => 'Jika email terdaftar, link reset password telah dikirim',
-            ], ['path' => '/password/forgot', 'meta' => ['title' => 'Lupa Password | ' . env('APP_NAME')]]);
+            return $response->renderPage(
+                ['message' => 'Jika email terdaftar, link reset password telah dikirim'],
+                ['path' => '/password/forgot', 'meta' => ['title' => 'Lupa Password | ' . env('APP_NAME')]]
+            );
         }
 
         // If user registered with Google, they don't have password
         if (!empty($user['google_id'])) {
-            return $response->renderPage([], [
-                'path' => '/password/forgot?Akun+Anda+terdaftar+dengan+Google.+Silakan+reset+password+melalui+Google',
-                'meta' => ['title' => 'Lupa Password']
-            ]);
+            return $response->redirect('/password/forgot?Akun+Anda+terdaftar+dengan+Google.+Silakan+reset+password+melalui+Google');
         }
 
         // Generate reset token
@@ -578,7 +575,7 @@ class AuthController
         $this->passwordResetTokens->createToken($user['id'], $token, 60);
 
         // Build reset URL
-        $resetUrl = rtrim(env('APP_URL', 'http://localhost:9000'), '/') . '/password/reset/' . $token . '?email=' . urlencode($email);
+        $resetUrl = rtrim(env('APP_URL', 'http://localhost:8000'), '/') . '/password/reset'  . '?email=' . urlencode($email) . '&token=' . $token;
 
         // Send email
         $this->emailService->sendPasswordReset(
@@ -596,9 +593,9 @@ class AuthController
     /**
      * Show reset password form
      */
-    public function showResetPassword(Request $request, Response $response, array $params): View | RedirectResponse
+    public function showResetPassword(Request $request, Response $response): View | RedirectResponse
     {
-        $token = $params['token'] ?? null;
+        $token = $request->query['token'] ?? null;
         $email = $request->query['email'] ?? null;
 
         if (!$token) {
@@ -609,52 +606,46 @@ class AuthController
         $tokenData = $this->passwordResetTokens->findValidToken($token);
 
         if (!$tokenData || $tokenData['user_id'] !== $this->users->findByEmail($email)['id']) {
-            return $response->renderPage([], [
-                'path' => '/password/reset?error=Link+reset+password+tidak+valid+atau+telah+kedaluwarsa',
-                'meta' => ['title' => 'Reset Password']
-            ]);
+            return $response->redirect('/password/reset?error=Link+reset+password+tidak+valid+atau+telah+kedaluwarsa');
         }
 
-        return $response->renderPage([
-            'token' => $token,
-            'email' => $email,
-        ], ['path' => '/password/reset', 'meta' => ['title' => 'Reset Password | ' . env('APP_NAME')]]);
+        return $response->renderPage(
+            ['token' => $token, 'email' => $email,],
+            ['meta' => ['title' => 'Reset Password | ' . env('APP_NAME')]]
+        );
     }
 
     /**
      * Process reset password
      */
-    public function resetPassword(Request $request, Response $response, array $params): View | RedirectResponse
+    public function resetPassword(Request $request, Response $response): View | RedirectResponse
     {
         $email = $request->input('email');
         $password = $request->input('password');
         $passwordConfirmation = $request->input('password_confirmation');
-        $token = $params['token'] ?? null;
+        $token = $request->input('token') ?? null;
 
         if ($password !== $passwordConfirmation) {
-            return $response->renderPage([], ['path' => '/password/reset?Password+konfirmasi+tidak+cocok', 'meta' => ['title' => 'Reset Password']]);
+            return $response->redirect('/password/reset?Password+konfirmasi+tidak+cocok');
         }
 
         // Validate new password
         $passwordValidation = $this->validatePassword($password);
         if (!$passwordValidation['valid']) {
-            return $response->renderPage([], ['path' => '/password/reset?' . urlencode(implode(', ', $passwordValidation['errors'])), 'meta' => ['title' => 'Reset Password']]);
+            return $response->redirect('/password/reset?' . urlencode(implode(', ', $passwordValidation['errors'])));
         }
 
         // Validate token
         $tokenData = $this->passwordResetTokens->findValidToken($token);
 
         if (!$tokenData) {
-            return $response->renderPage([], [
-                'path' => '/password/reset?error=Link+reset+password+tidak+valid+atau+telah+kedaluwarsa',
-                'meta' => ['title' => 'Reset Password']
-            ]);
+            return $response->redirect('/password/reset?error=Link+reset+password+tidak+valid+atau+telah+kedaluwarsa');
         }
 
         $user = $this->users->findByEmail($email);
 
         if (!$user || $user['id'] !== $tokenData['user_id']) {
-            return $response->renderPage([], ['path' => '/password/reset?Email+tidak+valid', 'meta' => ['title' => 'Reset Password']]);
+            return $response->redirect('/password/reset?Email+tidak+valid');
         }
 
         // Update password
@@ -663,8 +654,9 @@ class AuthController
         // Invalidate all reset tokens
         $this->passwordResetTokens->invalidateAll($user['id']);
 
-        return $response->renderPage([
-            'message' => 'Password berhasil direset. Silakan login dengan password baru',
-        ], ['path' => '/password/reset', 'meta' => ['title' => 'Password Direset | ' . env('APP_NAME')]]);
+        return $response->renderPage(
+            ['message' => 'Password berhasil direset. Silakan login dengan password baru',],
+            ['path' => '/password/reset', 'meta' => ['title' => 'Password Direset | ' . env('APP_NAME')]]
+        );
     }
 }

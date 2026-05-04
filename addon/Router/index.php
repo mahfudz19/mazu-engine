@@ -27,7 +27,7 @@ $router->group(['middleware' => ['guest']], function () use ($router) {
     // Password reset
     $router->get('/password/forgot', [AuthController::class, 'showForgotPassword']);
     $router->post('/password/forgot', [AuthController::class, 'sendResetLink']);
-    $router->get('/password/reset/{token}', [AuthController::class, 'showResetPassword']);
+    $router->get('/password/reset', [AuthController::class, 'showResetPassword']);
     $router->post('/password/reset', [AuthController::class, 'resetPassword']);
 
     // Google OAuth

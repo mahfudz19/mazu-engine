@@ -13,96 +13,96 @@ use App\Services\ConfigService;
  */
 class SessionAuthSetupCommand implements CommandInterface
 {
-  public function __construct(
-    private Application $app,
-  ) {}
+    public function __construct(
+        private Application $app,
+    ) {}
 
-  private function getConfig(): ConfigService
-  {
-    return $this->app->getContainer()->resolve(ConfigService::class);
-  }
-
-  public function getName(): string
-  {
-    return 'auth:session-setup';
-  }
-
-  public function getDescription(): string
-  {
-    return 'Setup session-based authentication (email/password) dengan avatar, dan password min 8';
-  }
-
-  public function handle(array $arguments): int
-  {
-    echo "\n🔐 Mazu Framework - Session Auth Setup\n\n";
-
-    // Parse arguments
-    [$dbConnection, $withRole] = $this->parseArguments($arguments);
-
-    echo "📦 Konfigurasi:\n";
-    echo "   - Database: {$dbConnection}\n";
-    echo "   - Role System: " . ($withRole ? 'Ya' : 'Tidak') . "\n";
-    echo "   - Avatar Field: Ya (default)\n";
-    echo "   - Password Min Length: 8 (default)\n\n";
-
-    // Validate database connection
-    if (!$this->validateDbConnection($dbConnection)) {
-      echo "❌ Database connection '{$dbConnection}' tidak tersedia.\n";
-      echo "   Pastikan sudah dikonfigurasi di config/database.php\n\n";
-      return 1;
+    private function getConfig(): ConfigService
+    {
+        return $this->app->getContainer()->resolve(ConfigService::class);
     }
 
-    // Start setup
-    echo "🚀 Memulai setup session authentication...\n\n";
-
-    $this->setupEnvPlaceholders();
-    $this->setupUserModel($dbConnection, $withRole);
-    $this->setupAuthController($withRole);
-    $this->setupAuthMiddleware($withRole);
-    $this->setupRoutes($withRole);
-    $this->setupViews();
-
-    echo "\n✅ Session authentication setup selesai!\n\n";
-    $this->printNextSteps($withRole);
-
-    return 0;
-  }
-
-  private function parseArguments(array $arguments): array
-  {
-    $dbConnection = 'mysql';
-    $withRole = false;
-
-    foreach ($arguments as $arg) {
-      if (str_starts_with($arg, '--db=')) {
-        $dbConnection = substr($arg, 5);
-      } elseif ($arg === '--with-role') {
-        $withRole = true;
-      }
+    public function getName(): string
+    {
+        return 'auth:session-setup';
     }
 
-    return [$dbConnection, $withRole];
-  }
+    public function getDescription(): string
+    {
+        return 'Setup session-based authentication (email/password) dengan avatar, dan password min 8';
+    }
 
-  private function validateDbConnection(string $connection): bool
-  {
-    $config = $this->getConfig();
-    $dbConfig = $config->get('database.connections', []);
+    public function handle(array $arguments): int
+    {
+        echo "\n🔐 Mazu Framework - Session Auth Setup\n\n";
 
-    return isset($dbConfig[$connection]);
-  }
+        // Parse arguments
+        [$dbConnection, $withRole] = $this->parseArguments($arguments);
 
-  private function setupEnvPlaceholders(): void
-  {
-    echo "📝 Setup environment placeholders...\n";
+        echo "📦 Konfigurasi:\n";
+        echo "   - Database: {$dbConnection}\n";
+        echo "   - Role System: " . ($withRole ? 'Ya' : 'Tidak') . "\n";
+        echo "   - Avatar Field: Ya (default)\n";
+        echo "   - Password Min Length: 8 (default)\n\n";
 
-    $root = __DIR__ . '/../../..';
-    $envPath = $root . '/.env';
-    $envExamplePath = $root . '/.env.example';
+        // Validate database connection
+        if (!$this->validateDbConnection($dbConnection)) {
+            echo "❌ Database connection '{$dbConnection}' tidak tersedia.\n";
+            echo "   Pastikan sudah dikonfigurasi di config/database.php\n\n";
+            return 1;
+        }
 
-    // Create .env.example if not exists
-    if (!file_exists($envExamplePath)) {
-      $exampleContent = <<<'ENV'
+        // Start setup
+        echo "🚀 Memulai setup session authentication...\n\n";
+
+        $this->setupEnvPlaceholders();
+        $this->setupUserModel($dbConnection, $withRole);
+        $this->setupAuthController($withRole);
+        $this->setupAuthMiddleware($withRole);
+        $this->setupRoutes($withRole);
+        $this->setupViews();
+
+        echo "\n✅ Session authentication setup selesai!\n\n";
+        $this->printNextSteps($withRole);
+
+        return 0;
+    }
+
+    private function parseArguments(array $arguments): array
+    {
+        $dbConnection = 'mysql';
+        $withRole = false;
+
+        foreach ($arguments as $arg) {
+            if (str_starts_with($arg, '--db=')) {
+                $dbConnection = substr($arg, 5);
+            } elseif ($arg === '--with-role') {
+                $withRole = true;
+            }
+        }
+
+        return [$dbConnection, $withRole];
+    }
+
+    private function validateDbConnection(string $connection): bool
+    {
+        $config = $this->getConfig();
+        $dbConfig = $config->get('database.connections', []);
+
+        return isset($dbConfig[$connection]);
+    }
+
+    private function setupEnvPlaceholders(): void
+    {
+        echo "📝 Setup environment placeholders...\n";
+
+        $root = __DIR__ . '/../../..';
+        $envPath = $root . '/.env';
+        $envExamplePath = $root . '/.env.example';
+
+        // Create .env.example if not exists
+        if (!file_exists($envExamplePath)) {
+            $exampleContent = <<<'ENV'
 APP_NAME="Mazu Framework"
 APP_ENV=local
 APP_KEY=
@@ -120,33 +120,33 @@ SESSION_DRIVER=file
 SESSION_LIFETIME=120
 
 ENV;
-      file_put_contents($envExamplePath, $exampleContent);
+            file_put_contents($envExamplePath, $exampleContent);
+        }
+
+        // Create .env if not exists
+        if (!file_exists($envPath)) {
+            copy($envExamplePath, $envPath);
+        }
+
+        echo "   ✓ Environment files ready\n";
     }
 
-    // Create .env if not exists
-    if (!file_exists($envPath)) {
-      copy($envExamplePath, $envPath);
-    }
+    private function setupUserModel(string $dbConnection, bool $withRole): void
+    {
+        echo "📦 Setup UserModel...\n";
 
-    echo "   ✓ Environment files ready\n";
-  }
+        $root = __DIR__ . '/../../..';
+        $modelDir = $root . '/addon/Models';
+        $modelPath = $modelDir . '/UserModel.php';
 
-  private function setupUserModel(string $dbConnection, bool $withRole): void
-  {
-    echo "📦 Setup UserModel...\n";
+        if (!is_dir($modelDir)) {
+            mkdir($modelDir, 0755, true);
+        }
 
-    $root = __DIR__ . '/../../..';
-    $modelDir = $root . '/addon/Models';
-    $modelPath = $modelDir . '/UserModel.php';
-
-    if (!is_dir($modelDir)) {
-      mkdir($modelDir, 0755, true);
-    }
-
-    $roleSchema = $withRole ? "
+        $roleSchema = $withRole ? "
         'role' => ['type' => 'enum', 'values' => ['super-admin', 'admin', 'user'], 'nullable' => false, 'default' => 'user']" : '';
 
-    $seedContent = $withRole ? "
+        $seedContent = $withRole ? "
         [
             'email' => 'superadmin@example.com',
             'password' => '$2y$10\$XlyT7neGvzxYcZ5v.4gsP.QFqRq7UG8nNrJF1Bk4fiP/vQUCqXlDm', // password123
@@ -191,7 +191,7 @@ ENV;
             'last_login_at' => null,
         ]";
 
-    $template = <<<PHP
+        $template = <<<PHP
 <?php
 
 namespace Addon\Models;
@@ -361,38 +361,43 @@ class UserModel extends Model
 }
 PHP;
 
-    file_put_contents($modelPath, $template);
-    echo "   ✓ UserModel created\n";
-  }
-
-  private function setupAuthController(bool $withRole): void
-  {
-    echo "🎮 Setup AuthController...\n";
-
-    $root = __DIR__ . '/../../..';
-    $controllerDir = $root . '/addon/Controllers';
-    $controllerPath = $controllerDir . '/AuthController.php';
-
-    if (!is_dir($controllerDir)) {
-      mkdir($controllerDir, 0755, true);
+        file_put_contents($modelPath, $template);
+        echo "   ✓ UserModel created\n";
     }
 
-    $roleHandling = $withRole ? <<<'PHP'
+    private function setupAuthController(bool $withRole): void
+    {
+        echo "🎮 Setup AuthController...\n";
+
+        $root = __DIR__ . '/../../..';
+        $controllerDir = $root . '/addon/Controllers';
+        $controllerPath = $controllerDir . '/AuthController.php';
+
+        if (!is_dir($controllerDir)) {
+            mkdir($controllerDir, 0755, true);
+        }
+
+        $roleHandling = $withRole ? <<<'PHP'
         // Role handling
         $role = $request->input('role', 'user');
         if (!in_array($role, ['super-admin', 'admin', 'user'])) {
             $role = 'user';
         }
 PHP
-      : <<<'PHP'
+            : <<<'PHP'
 PHP;
 
-    $template = <<<PHP
+        $template = <<<PHP
 <?php
 
 namespace Addon\Controllers;
 
 use Addon\Models\UserModel;
+use Addon\Models\EmailVerificationModel;
+use Addon\Models\PasswordResetTokenModel;
+use Addon\Models\LoginNotificationModel;
+use Addon\Services\EmailService;
+use Addon\Helpers\OtpGenerator;
 use App\Services\SessionService;
 use App\Core\Http\Request;
 use App\Core\Http\Response;
@@ -402,20 +407,25 @@ use App\Exceptions\HttpException;
 use Exception;
 
 /**
- * Authentication Controller
+ * Authentication Controller - Hybrid Auth System
  *
  * Handles:
- * - Login form & process
- * - Register form & process
+ * - Login (Email/Password + Google OAuth)
+ * - Register (Manual + Google OAuth)
+ * - OTP Verification
  * - Logout
- * - Email verification
- * - Password reset
+ * - Password reset via email
+ * - Login notifications
  */
 class AuthController
 {
     public function __construct(
         private UserModel \$users,
         private SessionService \$session,
+        private EmailVerificationModel \$emailVerifications,
+        private PasswordResetTokenModel \$passwordResetTokens,
+        private LoginNotificationModel \$loginNotifications,
+        private EmailService \$emailService,
     ) {}
 
     /**
@@ -481,7 +491,7 @@ class AuthController
     private function user(): ?array
     {
         \$userId = \$this->session->get('auth.user_id');
-        
+
         if (\$userId === null) {
             return null;
         }
@@ -498,7 +508,7 @@ class AuthController
         \$this->session->set('auth.user_email', \$user['email']);
         \$this->session->set('auth.user_name', \$user['name']);
         \$this->session->set('auth.user_avatar', \$user['avatar'] ?? null);
-        
+
         if (isset(\$user['role'])) {
             \$this->session->set('auth.user_role', \$user['role']);
         }
@@ -527,7 +537,7 @@ class AuthController
     }
 
     /**
-     * Process login
+     * Process login (Email/Password)
      */
     public function login(Request \$request, Response \$response): View | RedirectResponse
     {
@@ -538,28 +548,38 @@ class AuthController
             return \$response->redirect('/login?error=Email+dan+password+harus+diisi');
         }
 
-        // Find user by email (returns array)
+        // Find user by email
         \$user = \$this->users->findByEmail(\$email);
-        
+
         if (!\$user) {
             return \$response->redirect('/login?error=Email+tidak+ditemukan');
         }
 
-        // Verify password (access array property)
+        // If user has google_id, they registered via Google - no password set
+        if (!empty(\$user['google_id'])) {
+            return \$response->redirect('/login?error=Akun+terdaftar+dengan+Google.+Silakan+login+menggunakan+Google');
+        }
+
+        // Verify password
         if (!\$this->verifyPassword(\$password, \$user['password'])) {
             return \$response->redirect('/login?error=Password+salah');
         }
 
-        // Check if user is active (access array property)
+        // Check if user is active
         if (!\$user['is_active']) {
-            return \$response->redirect('/login?error=Akun+tidak+aktif');
+            // User not active - resend OTP and redirect to verify
+            \$this->sendOtpToUser(\$user['id'], \$user['email']);
+            return \$response->redirect('/verify-otp?email=' . urlencode(\$user['email']) . '&info=Akun+belum+terverifikasi.+Silakan+verifikasi+email+Anda');
         }
 
-        // Update last login (pass ID)
+        // Update last login
         \$this->users->updateLastLogin(\$user['id']);
 
         // Login successful - save session
         \$this->loginSession(\$user);
+
+        // Send login notification email
+        \$this->sendLoginNotification(\$user);
 
         return \$response->redirect('/dashboard');
     }
@@ -578,7 +598,7 @@ class AuthController
     }
 
     /**
-     * Process register
+     * Process register (Manual with OTP verification)
      */
     public function register(Request \$request, Response \$response): View | RedirectResponse
     {
@@ -602,19 +622,21 @@ class AuthController
             return \$response->redirect('/register?error=' . urlencode(implode(', ', \$passwordValidation['errors'])));
         }
 
-        // Role handling
-        \$role = \$request->input('role', 'user');
-        if (!in_array(\$role, ['super-admin', 'admin', 'user'])) {
-            \$role = 'user';
+        {$roleHandling}
+
+        // Check if email already exists
+        \$existingUser = \$this->users->findByEmail(\$email);
+        if (\$existingUser) {
+            return \$response->redirect('/register?error=Email+sudah+terdaftar');
         }
 
-        // Prepare user data
+        // Prepare user data (is_active = false, waiting for OTP verification)
         \$userData = [
             'email' => \$email,
             'password' => \$this->hashPassword(\$password),
             'name' => \$name,
             'avatar' => null,
-            'is_active' => true,
+            'is_active' => 0, // Not active until OTP verified
         ];
 
         // Add role if schema has role field
@@ -622,26 +644,31 @@ class AuthController
             \$userData['role'] = \$role;
         }
 
-        // find user by email
-        \$existingUser = \$this->users->findByEmail(\$email);
-        if (\$existingUser) {
-            return \$response->redirect('/register?error=Email+sudah+terdaftar');
-        }
-
-        // Create user using model with try-catch
+        // Create user with try-catch
         try {
             \$userId = \$this->users->create(\$userData);
             \$newUser = \$this->users->find(\$userId);
 
-            // Auto-login after register
-            if (\$newUser) {
-                \$this->loginSession(\$newUser);
+            if (!\$newUser) {
+                throw new Exception('Gagal membuat user');
             }
-        } catch (\Exception \$e) {
+
+            // Send OTP to user's email
+            \$otpCode = OtpGenerator::generate();
+            \$this->emailVerifications->createOtp(\$userId, \$email, \$otpCode, 15);
+
+            // Send email with OTP
+            \$this->emailService->sendOtpVerification(\$email, \$name, \$otpCode, 15);
+
+            // Store user ID in session for OTP verification
+            \$this->session->set('auth.pending_user_id', \$userId);
+            \$this->session->set('auth.pending_user_email', \$email);
+
+            // Redirect to OTP sent page
+            return \$response->redirect('/otp-sent?email=' . urlencode(\$email));
+        } catch (\\Exception \$e) {
             return \$response->redirect('/register?error=' . urlencode(\$e->getMessage()));
         }
-
-        return \$response->redirect('/dashboard');
     }
 
     /**
@@ -651,6 +678,250 @@ class AuthController
     {
         \$this->logoutSession();
         return \$response->redirect('/login');
+    }
+
+    /**
+     * Show OTP verification page
+     */
+    public function showVerifyOtp(Request \$request, Response \$response): View | RedirectResponse
+    {
+        \$email = \$request->query['email'] ?? null;
+        \$info = \$request->query['info'] ?? null;
+
+        if (!\$email) {
+            return \$response->redirect('/register');
+        }
+
+        return \$response->renderPage([
+            'email' => \$email,
+            'info' => \$info,
+        ], ['path' => '/verify-otp', 'meta' => ['title' => 'Verifikasi Email | ' . env('APP_NAME')]]);
+    }
+
+    /**
+     * Process OTP verification
+     */
+    public function verifyOtp(Request \$request, Response \$response): View | RedirectResponse
+    {
+        \$email = \$request->input('email');
+        \$otpCode = \$request->input('otp_code');
+
+        if (!\$email || !\$otpCode) {
+            return \$response->redirect('/verify-otp?email=' . urlencode(\$email ?? '') . '&error=Email+dan+kode+OTP+harus+diisi');
+        }
+
+        // Find user by email
+        \$user = \$this->users->findByEmail(\$email);
+
+        if (!\$user) {
+            return \$response->redirect('/verify-otp?email=' . urlencode(\$email) . '&error=User+tidak+ditemukan');
+        }
+
+        // Verify OTP
+        \$result = \$this->emailVerifications->verifyOtp(\$user['id'], \$otpCode);
+
+        if (!\$result['valid']) {
+            return \$response->redirect('/verify-otp?email=' . urlencode(\$email) . '&error=' . urlencode(\$result['message']));
+        }
+
+        // Activate user account
+        // Catatan: Email verification status dilacak melalui tabel email_verifications (used_at)
+        // bukan melalui kolom di tabel users
+        \$this->users->updateById(\$user['id'], [
+            'is_active' => 1,
+        ]);
+
+        // Invalidate all other OTPs
+        \$this->emailVerifications->invalidateAll(\$user['id']);
+
+        // Auto-login after verification
+        \$this->loginSession(\$user);
+
+        // Send login notification
+        \$this->sendLoginNotification(\$user);
+
+        return \$response->redirect('/dashboard?success=Email+berhasil+diverifikasi');
+    }
+
+    /**
+     * Resend OTP
+     */
+    public function resendOtp(Request \$request, Response \$response): View | RedirectResponse
+    {
+        \$email = \$request->query['email'] ?? null;
+
+        if (!\$email) {
+            return \$response->redirect('/register');
+        }
+
+        \$user = \$this->users->findByEmail(\$email);
+
+        if (!\$user) {
+            return \$response->redirect('/register?error=User+tidak+ditemukan');
+        }
+
+        // Check if user already verified
+        if (\$user['is_active']) {
+            return \$response->redirect('/login?info=Akun+sudah+aktif.+Silakan+login');
+        }
+
+        // Send new OTP
+        \$this->sendOtpToUser(\$user['id'], \$user['email']);
+
+        return \$response->redirect('/otp-sent?email=' . urlencode(\$email) . '&success=Kode+OTP+telah+dikirim+kembali');
+    }
+
+    /**
+     * Show OTP sent page
+     */
+    public function showOtpSent(Request \$request, Response \$response): View | RedirectResponse
+    {
+        \$email = \$request->query['email'] ?? null;
+        \$success = \$request->query['success'] ?? null;
+
+        if (!\$email) {
+            return \$response->redirect('/register');
+        }
+
+        return \$response->renderPage([
+            'email' => \$email,
+            'success' => \$success,
+        ], ['path' => '/otp-sent', 'meta' => ['title' => 'Email Terkirim | ' . env('APP_NAME')]]);
+    }
+
+    /**
+     * Google OAuth callback
+     */
+    public function googleCallback(Request \$request, Response \$response): View | RedirectResponse
+    {
+        \$code = \$request->query['code'] ?? null;
+
+        if (!\$code) {
+            return \$response->redirect('/login?error=Authorization+code+tidak+ditemukan');
+        }
+
+        try {
+            // Exchange code for token
+            \$client = new \\Google_Client();
+            \$client->setClientId(env('GOOGLE_CLIENT_ID'));
+            \$client->setClientSecret(env('GOOGLE_CLIENT_SECRET'));
+            \$client->setRedirectUri(env('GOOGLE_REDIRECT_URI'));
+
+            \$token = \$client->fetchAccessTokenWithAuthCode(\$code);
+
+            if (isset(\$token['error'])) {
+                throw new Exception(\$token['error']);
+            }
+
+            // Get user info from Google
+            \$client->setAccessToken(\$token);
+            \$oauth2 = new \\Google_Service_Oauth2(\$client);
+            \$googleUser = \$oauth2->userinfo->get();
+
+            // Check if user exists by google_id
+            \$existingUser = \$this->users->findByEmail(\$googleUser->email);
+
+            if (\$existingUser) {
+                // User exists - check if already linked to Google
+                if (empty(\$existingUser['google_id'])) {
+                    // Link Google ID to existing user
+                    \$this->users->updateById(\$existingUser['id'], [
+                        'google_id' => \$googleUser->id,
+                        'avatar_url' => \$googleUser->picture,
+                    ]);
+                }
+
+                // Login existing user
+                \$this->loginSession(\$existingUser);
+                \$this->sendLoginNotification(\$existingUser);
+            } else {
+                // Check domain restriction
+                \$allowedDomain = env('GOOGLE_ALLOWED_DOMAIN');
+                if (\$allowedDomain) {
+                    \$domain = substr(strrchr(\$googleUser->email, "@"), 1);
+                    if (\$domain !== ltrim(\$allowedDomain, '@')) {
+                        return \$response->redirect('/login?error=Domain+email+tidak+diizinkan.+Hanya+' . \$allowedDomain);
+                    }
+                }
+
+                // Create new user from Google
+                \$userData = [
+                    'email' => \$googleUser->email,
+                    'password' => null, // No password for Google users
+                    'name' => \$googleUser->name,
+                    'avatar' => \$googleUser->picture,
+                    'is_active' => 1, // Google verified email, so auto-activate
+                    'google_id' => \$googleUser->id,
+                    'avatar_url' => \$googleUser->picture,
+                ];
+
+                // Add role if schema has role field
+                if (isset(\$this->users->getSchema()['role'])) {
+                    \$userData['role'] = 'user';
+                }
+
+                \$userId = \$this->users->create(\$userData);
+                \$newUser = \$this->users->find(\$userId);
+
+                // Auto-login
+                \$this->loginSession(\$newUser);
+                \$this->sendLoginNotification(\$newUser);
+            }
+
+            return \$response->redirect('/dashboard?success=Login+berhasil+dengan+Google');
+        } catch (Exception \$e) {
+            return \$response->redirect('/login?error=' . urlencode('Google OAuth error: ' . \$e->getMessage()));
+        }
+    }
+
+    /**
+     * Send OTP to user
+     */
+    private function sendOtpToUser(int \$userId, string \$email): void
+    {
+        // Invalidate old OTPs
+        \$this->emailVerifications->invalidateAll(\$userId);
+
+        // Generate new OTP
+        \$otpCode = OtpGenerator::generate();
+
+        // Create OTP record
+        \$this->emailVerifications->createOtp(\$userId, \$email, \$otpCode, 15);
+
+        // Get user name
+        \$user = \$this->users->find(\$userId);
+        \$name = \$user['name'] ?? \$email;
+
+        // Send email
+        \$this->emailService->sendOtpVerification(\$email, \$name, \$otpCode, 15);
+    }
+
+    /**
+     * Send login notification email
+     */
+    private function sendLoginNotification(array \$user): void
+    {
+        \$ipAddress = \$_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+        \$userAgent = \$_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+        \$loginAt = date('Y-m-d H:i:s');
+
+        // Log to database
+        \$this->loginNotifications->logLogin(
+            \$user['id'],
+            \$user['email'],
+            \$ipAddress,
+            \$userAgent,
+            \$loginAt
+        );
+
+        // Send notification email
+        \$this->emailService->sendLoginNotification(
+            \$user['email'],
+            \$user['name'] ?? \$user['email'],
+            \$ipAddress,
+            \$userAgent,
+            \$loginAt
+        );
     }
 
     /**
@@ -669,93 +940,135 @@ class AuthController
         \$email = \$request->input('email');
 
         if (!\$email) {
-            return \$response->renderPage([], ['path' => '/password/forgot?Email+harus+diisi', 'meta' => ['title' => 'Lupa Password']]);
+            return \$response->redirect('/password/forgot?Email+harus+diisi');
         }
 
         \$user = \$this->users->findByEmail(\$email);
-        
+
         if (!\$user) {
-            return \$response->renderPage([], ['path' => '/password/forgot?Email+tidak+ditemukan', 'meta' => ['title' => 'Lupa Password']]);
+            // For security, show same success message even if email not found
+            return \$response->renderPage(
+                ['message' => 'Jika email terdaftar, link reset password telah dikirim'],
+                ['path' => '/password/forgot', 'meta' => ['title' => 'Lupa Password | ' . env('APP_NAME')]]
+            );
         }
 
-        // TODO: Generate reset token dan kirim email
-        // For now, just show success message
+        // If user registered with Google, they don't have password
+        if (!empty(\$user['google_id'])) {
+            return \$response->redirect('/password/forgot?Akun+Anda+terdaftar+dengan+Google.+Silakan+reset+password+melalui+Google');
+        }
+
+        // Generate reset token
+        \$token = \$this->passwordResetTokens->generateToken();
+        \$this->passwordResetTokens->createToken(\$user['id'], \$token, 60);
+
+        // Build reset URL
+        \$resetUrl = rtrim(env('APP_URL', 'http://localhost:8000'), '/') . '/password/reset'  . '?email=' . urlencode(\$email) . '&token=' . \$token;
+
+        // Send email
+        \$this->emailService->sendPasswordReset(
+            \$user['email'],
+            \$user['name'] ?? \$user['email'],
+            \$resetUrl,
+            60
+        );
+
         return \$response->renderPage([
-            'message' => 'Link reset password telah dikirim ke email Anda',
+            'message' => 'Jika email terdaftar, link reset password telah dikirim',
         ], ['path' => '/password/forgot', 'meta' => ['title' => 'Lupa Password | ' . env('APP_NAME')]]);
     }
 
     /**
      * Show reset password form
      */
-    public function showResetPassword(Request \$request, Response \$response, array \$params): View | RedirectResponse
+    public function showResetPassword(Request \$request, Response \$response): View | RedirectResponse
     {
-        \$token = \$params['token'] ?? null;
-        \$email = \$params['email'] ?? null;
+        \$token = \$request->query['token'] ?? null;
+        \$email = \$request->query['email'] ?? null;
 
-        if (!\$token || !\$email) {
+        if (!\$token) {
             return \$response->redirect('/password/forgot');
         }
 
-        return \$response->renderPage([
-            'token' => \$token,
-            'email' => \$email,
-        ], ['path' => '/password/reset', 'meta' => ['title' => 'Reset Password | ' . env('APP_NAME')]]);
+        // Validate token
+        \$tokenData = \$this->passwordResetTokens->findValidToken(\$token);
+
+        if (!\$tokenData || \$tokenData['user_id'] !== \$this->users->findByEmail(\$email)['id']) {
+            return \$response->redirect('/password/reset?error=Link+reset+password+tidak+valid+atau+telah+kedaluwarsa');
+        }
+
+        return \$response->renderPage(
+            ['token' => \$token, 'email' => \$email,],
+            ['meta' => ['title' => 'Reset Password | ' . env('APP_NAME')]]
+        );
     }
 
     /**
      * Process reset password
      */
-    public function resetPassword(Request \$request, Response \$response, array \$params): View | RedirectResponse
+    public function resetPassword(Request \$request, Response \$response): View | RedirectResponse
     {
         \$email = \$request->input('email');
         \$password = \$request->input('password');
         \$passwordConfirmation = \$request->input('password_confirmation');
+        \$token = \$request->input('token') ?? null;
 
         if (\$password !== \$passwordConfirmation) {
-            return \$response->renderPage([], ['path' => '/password/reset?Password+konfirmasi+tidak+cocok', 'meta' => ['title' => 'Reset Password']]);
+            return \$response->redirect('/password/reset?Password+konfirmasi+tidak+cocok');
         }
 
         // Validate new password
         \$passwordValidation = \$this->validatePassword(\$password);
         if (!\$passwordValidation['valid']) {
-            return \$response->renderPage([], ['path' => '/password/reset?' . urlencode(implode(', ', \$passwordValidation['errors'])), 'meta' => ['title' => 'Reset Password']]);
+            return \$response->redirect('/password/reset?' . urlencode(implode(', ', \$passwordValidation['errors'])));
+        }
+
+        // Validate token
+        \$tokenData = \$this->passwordResetTokens->findValidToken(\$token);
+
+        if (!\$tokenData) {
+            return \$response->redirect('/password/reset?error=Link+reset+password+tidak+valid+atau+telah+kedaluwarsa');
         }
 
         \$user = \$this->users->findByEmail(\$email);
-        
-        if (!\$user) {
-            return \$response->renderPage([], ['path' => '/password/reset?Email+tidak+ditemukan', 'meta' => ['title' => 'Reset Password']]);
+
+        if (!\$user || \$user['id'] !== \$tokenData['user_id']) {
+            return \$response->redirect('/password/reset?Email+tidak+valid');
         }
 
+        // Update password
         \$this->users->updateById(\$user['id'], ['password' => \$this->hashPassword(\$password)]);
 
-        return \$response->renderPage([
-            'message' => 'Password berhasil direset. Silakan login dengan password baru',
-        ], ['path' => '/password/reset', 'meta' => ['title' => 'Password Direset | ' . env('APP_NAME')]]);
+        // Invalidate all reset tokens
+        \$this->passwordResetTokens->invalidateAll(\$user['id']);
+
+        return \$response->renderPage(
+            ['message' => 'Password berhasil direset. Silakan login dengan password baru',],
+            ['path' => '/password/reset', 'meta' => ['title' => 'Password Direset | ' . env('APP_NAME')]]
+        );
     }
 }
 PHP;
 
-    file_put_contents($controllerPath, $template);
-    echo "   ✓ AuthController created\n";
-  }
-
-  private function setupAuthMiddleware(bool $withRole): void
-  {
-    echo "🛡️ Setup Auth Middleware...\n";
-
-    $root = __DIR__ . '/../../..';
-    $middlewareDir = $root . '/addon/Middleware';
-
-    if (!is_dir($middlewareDir)) {
-      mkdir($middlewareDir, 0755, true);
+        file_put_contents($controllerPath, $template);
+        echo "   ✓ AuthController created\n";
     }
 
-    // AuthMiddleware - Check if user is logged in
-    $authMiddlewarePath = $middlewareDir . '/AuthMiddleware.php';
+    private function setupAuthMiddleware(bool $withRole): void
+    {
+        echo "🛡️ Setup Auth Middleware...\n";
 
-    $authTemplate = <<<'PHP'
+        $root = __DIR__ . '/../../..';
+        $middlewareDir = $root . '/addon/Middleware';
+
+        if (!is_dir($middlewareDir)) {
+            mkdir($middlewareDir, 0755, true);
+        }
+
+        // AuthMiddleware - Check if user is logged in
+        $authMiddlewarePath = $middlewareDir . '/AuthMiddleware.php';
+
+        $authTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -781,13 +1094,13 @@ class AuthMiddleware implements MiddlewareInterface
 }
 PHP;
 
-    file_put_contents($authMiddlewarePath, $authTemplate);
-    echo "   ✓ AuthMiddleware created\n";
+        file_put_contents($authMiddlewarePath, $authTemplate);
+        echo "   ✓ AuthMiddleware created\n";
 
-    // GuestMiddleware - Redirect logged-in users from guest pages (alias: guest)
-    $guestMiddlewarePath = $root . '/addon/Middleware/GuestMiddleware.php';
+        // GuestMiddleware - Redirect logged-in users from guest pages (alias: guest)
+        $guestMiddlewarePath = $root . '/addon/Middleware/GuestMiddleware.php';
 
-    $guestTemplate = <<<'PHP'
+        $guestTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -813,14 +1126,14 @@ class GuestMiddleware implements MiddlewareInterface
 }
 PHP;
 
-    file_put_contents($guestMiddlewarePath, $guestTemplate);
-    echo "   ✓ GuestMiddleware created\n";
+        file_put_contents($guestMiddlewarePath, $guestTemplate);
+        echo "   ✓ GuestMiddleware created\n";
 
-    // RoleMiddleware - Only if --with-role is specified
-    if ($withRole) {
-      $roleMiddlewarePath = $root . '/addon/Middleware/RoleMiddleware.php';
+        // RoleMiddleware - Only if --with-role is specified
+        if ($withRole) {
+            $roleMiddlewarePath = $root . '/addon/Middleware/RoleMiddleware.php';
 
-      $roleTemplate = <<<'PHP'
+            $roleTemplate = <<<'PHP'
 <?php
 
 namespace Addon\Middleware;
@@ -849,20 +1162,20 @@ class RoleMiddleware implements MiddlewareInterface
 }
 PHP;
 
-      file_put_contents($roleMiddlewarePath, $roleTemplate);
-      echo "   ✓ RoleMiddleware created\n";
+            file_put_contents($roleMiddlewarePath, $roleTemplate);
+            echo "   ✓ RoleMiddleware created\n";
+        }
     }
-  }
 
-  private function setupRoutes(bool $withRole): void
-  {
-    echo "🛣️ Setup Routes...\n";
+    private function setupRoutes(bool $withRole): void
+    {
+        echo "🛣️ Setup Routes...\n";
 
-    $root = __DIR__ . '/../../..';
-    $routerPath = $root . '/addon/Router/index.php';
+        $root = __DIR__ . '/../../..';
+        $routerPath = $root . '/addon/Router/index.php';
 
-    // Routes untuk Hybrid Auth (Google OAuth + Manual OTP)
-    $routes = <<<'PHP'
+        // Routes untuk Hybrid Auth (Google OAuth + Manual OTP)
+        $routes = <<<'PHP'
 <?php
 
 use App\Core\Http\Request;
@@ -892,10 +1205,21 @@ $router->group(['middleware' => ['guest']], function () use ($router) {
     // Password reset
     $router->get('/password/forgot', [AuthController::class, 'showForgotPassword']);
     $router->post('/password/forgot', [AuthController::class, 'sendResetLink']);
-    $router->get('/password/reset/{token}', [AuthController::class, 'showResetPassword']);
+    $router->get('/password/reset', [AuthController::class, 'showResetPassword']);
     $router->post('/password/reset', [AuthController::class, 'resetPassword']);
     
     // Google OAuth
+    $router->get('/auth/google', function (Request $request, Response $response) {
+        $client = new \Google_Client();
+        $client->setClientId(env('GOOGLE_CLIENT_ID'));
+        $client->setClientSecret(env('GOOGLE_CLIENT_SECRET'));
+        $client->setRedirectUri(env('GOOGLE_REDIRECT_URI'));
+        $client->addScope('email');
+        $client->addScope('profile');
+        
+        $authUrl = $client->createAuthUrl();
+        return $response->redirect($authUrl);
+    });
     $router->get('/auth/callback', [AuthController::class, 'googleCallback']);
 });
 
@@ -916,36 +1240,36 @@ $router->get('/', function (Request $request, Response $response) {
 });
 PHP;
 
-    file_put_contents($routerPath, $routes);
-    echo "   ✓ Routes configured\n";
-  }
-
-  private function setupViews(): void
-  {
-    echo "🎨 Setup Views...\n";
-
-    $root = __DIR__ . '/../../..';
-    $viewsPath = $root . '/addon/Views';
-
-    // Create directories
-    $authDir = $viewsPath . '/(auth)';
-    $passwordDir = $viewsPath . '/password';
-    $dashboardDir = $viewsPath . '/dashboard';
-
-    if (!is_dir($authDir)) {
-      mkdir($authDir, 0755, true);
+        file_put_contents($routerPath, $routes);
+        echo "   ✓ Routes configured\n";
     }
 
-    if (!is_dir($passwordDir)) {
-      mkdir($passwordDir, 0755, true);
-    }
+    private function setupViews(): void
+    {
+        echo "🎨 Setup Views...\n";
 
-    if (!is_dir($dashboardDir)) {
-      mkdir($dashboardDir, 0755, true);
-    }
+        $root = __DIR__ . '/../../..';
+        $viewsPath = $root . '/addon/Views';
 
-    // Auth layout
-    $authLayout = <<<'PHP'
+        // Create directories
+        $authDir = $viewsPath . '/(auth)';
+        $passwordDir = $viewsPath . '/password';
+        $dashboardDir = $viewsPath . '/dashboard';
+
+        if (!is_dir($authDir)) {
+            mkdir($authDir, 0755, true);
+        }
+
+        if (!is_dir($passwordDir)) {
+            mkdir($passwordDir, 0755, true);
+        }
+
+        if (!is_dir($dashboardDir)) {
+            mkdir($dashboardDir, 0755, true);
+        }
+
+        // Auth layout
+        $authLayout = <<<'PHP'
 <?php
 
 /**
@@ -960,10 +1284,10 @@ PHP;
 </div>
 PHP;
 
-    file_put_contents("$authDir/layout.php", $authLayout);
+        file_put_contents("$authDir/layout.php", $authLayout);
 
-    // Login view
-    $loginView = <<<'PHP'
+        // Login view
+        $loginView = <<<'PHP'
 <?php
 
 /**
@@ -1017,10 +1341,10 @@ PHP;
 </div>
 PHP;
 
-    file_put_contents("$authDir/login.php", $loginView);
+        file_put_contents("$authDir/login.php", $loginView);
 
-    // Register view
-    $registerView = <<<'PHP'
+        // Register view
+        $registerView = <<<'PHP'
 <?php
 
 /**
@@ -1088,15 +1412,29 @@ PHP;
 </form>
 
 <div class="auth-divider">
+  <span>atau</span>
+</div>
+
+<a href="/auth/google" class="google-button">
+  <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+  </svg>
+  Register with Google
+</a>
+
+<div class="auth-divider">
   <span>Sudah punya akun?</span>
   <a data-spa href="/login" class="auth-link">Login</a>
 </div>
 PHP;
 
-    file_put_contents("$authDir/register.php", $registerView);
+        file_put_contents("$authDir/register.php", $registerView);
 
-    // Auth style
-    $authStyle = <<<'CSS'
+        // Auth style
+        $authStyle = <<<'CSS'
 .auth-container {
   min-height: 100vh;
   display: flex;
@@ -1189,12 +1527,38 @@ PHP;
   color: var(--md-sys-color-on-surface-variant);
   font-size: 0.875rem;
 }
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 48px;
+  background-color: #fff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: 24px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+.google-button:hover {
+  background-color: #f7f8f8;
+  border-color: #d2e3fc;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.google-icon {
+  flex-shrink: 0;
+}
 CSS;
 
-    file_put_contents("$authDir/style.css", $authStyle);
+        file_put_contents("$authDir/style.css", $authStyle);
 
-    // Dashboard view
-    $dashboardView = <<<'PHP'
+        // Dashboard view
+        $dashboardView = <<<'PHP'
 <main class="dashboard-main">
   <div class="dashboard-card">
     <h2 class="dashboard-card-title">Selamat Datang di Dashboard</h2>
@@ -1206,10 +1570,10 @@ CSS;
 </main>
 PHP;
 
-    file_put_contents("$dashboardDir/index.php", $dashboardView);
+        file_put_contents("$dashboardDir/index.php", $dashboardView);
 
-    // Dashboard style
-    $dashboardStyle = <<<'CSS'
+        // Dashboard style
+        $dashboardStyle = <<<'CSS'
 
 .dashboard-logout {
     color: var(--md-sys-color-error);
@@ -1247,10 +1611,10 @@ PHP;
 }
 CSS;
 
-    file_put_contents("$dashboardDir/style.css", $dashboardStyle);
+        file_put_contents("$dashboardDir/style.css", $dashboardStyle);
 
-    // Forgot password view
-    $forgotView = <<<'PHP'
+        // Forgot password view
+        $forgotView = <<<'PHP'
 <div class="auth-container">
   <div class="auth-card">
     <h1 class="auth-title">Lupa Password</h1>
@@ -1293,10 +1657,10 @@ CSS;
 </div>
 PHP;
 
-    file_put_contents("$passwordDir/forgot.php", $forgotView);
+        file_put_contents("$passwordDir/forgot.php", $forgotView);
 
-    // Reset password view
-    $resetView = <<<'PHP'
+        // Reset password view
+        $resetView = <<<'PHP'
 <div class="auth-container">
   <div class="auth-card">
     <h1 class="auth-title">Reset Password</h1>
@@ -1309,6 +1673,9 @@ PHP;
 
     <form method="POST" action="/password/reset">
       <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+      <?php if (isset($token)): ?>
+        <input type="hidden" name="token" value="<?= $token ?>">
+      <?php endif; ?>
 
       <div class="auth-form-group">
         <label for="email" class="auth-label">Email</label>
@@ -1354,10 +1721,10 @@ PHP;
 </div>
 PHP;
 
-    file_put_contents("$passwordDir/reset.php", $resetView);
+        file_put_contents("$passwordDir/reset.php", $resetView);
 
-    // Password style
-    $passwordStyle = <<<'CSS'
+        // Password style
+        $passwordStyle = <<<'CSS'
 
 .auth-container {
   min-height: 100vh;
@@ -1459,10 +1826,10 @@ PHP;
 }
 CSS;
 
-    file_put_contents("$passwordDir/style.css", $passwordStyle);
+        file_put_contents("$passwordDir/style.css", $passwordStyle);
 
-    // OTP Sent view
-    $otpSentView = <<<'PHP'
+        // OTP Sent view
+        $otpSentView = <<<'PHP'
 <?php
 
 /**
@@ -1516,10 +1883,10 @@ CSS;
 </div>
 PHP;
 
-    file_put_contents("$authDir/otp-sent.php", $otpSentView);
+        file_put_contents("$authDir/otp-sent.php", $otpSentView);
 
-    // Verify OTP view
-    $verifyOtpView = <<<'PHP'
+        // Verify OTP view
+        $verifyOtpView = <<<'PHP'
 <?php
 
 /**
@@ -1652,49 +2019,49 @@ PHP;
 </script>
 PHP;
 
-    file_put_contents("$authDir/verify-otp.php", $verifyOtpView);
+        file_put_contents("$authDir/verify-otp.php", $verifyOtpView);
 
-    echo "   ✓ Views created (auth/layout, auth/login, auth/register, auth/otp-sent, auth/verify-otp, auth/style, password/forgot, password/reset, password/style, dashboard/index, dashboard/style)\n";
-  }
-
-  private function printNextSteps(bool $withRole): void
-  {
-    echo "📋 Langkah Selanjutnya:\n\n";
-
-    echo "1. Jalankan migration untuk membuat tabel users:\n";
-    echo "   php mazu migrate\n\n";
-
-    echo "2. (Opsional) Seed data user:\n";
-    if ($withRole) {
-      echo "   - Super Admin: superadmin@example.com / password123\n";
-      echo "   - Admin: admin@example.com / password123\n";
-      echo "   - User: user@example.com / password123\n\n";
-    } else {
-      echo "   - User 1: user1@example.com / password123\n";
-      echo "   - User 2: user2@example.com / password123\n\n";
+        echo "   ✓ Views created (auth/layout, auth/login, auth/register, auth/otp-sent, auth/verify-otp, auth/style, password/forgot, password/reset, password/style, dashboard/index, dashboard/style)\n";
     }
 
-    if ($withRole) {
-      echo "3. Role system aktif. Middleware tersedia:\n";
-      echo "   - auth: Check if user is logged in\n";
-      echo "   - guest: Redirect if logged in\n";
-      echo "   - role:admin,role:super_admin: Check user role\n\n";
-    } else {
-      echo "3. Middleware tersedia:\n";
-      echo "   - auth: Check if user is logged in\n";
-      echo "   - guest: Redirect if logged in\n\n";
+    private function printNextSteps(bool $withRole): void
+    {
+        echo "📋 Langkah Selanjutnya:\n\n";
+
+        echo "1. Jalankan migration untuk membuat tabel users:\n";
+        echo "   php mazu migrate\n\n";
+
+        echo "2. (Opsional) Seed data user:\n";
+        if ($withRole) {
+            echo "   - Super Admin: superadmin@example.com / password123\n";
+            echo "   - Admin: admin@example.com / password123\n";
+            echo "   - User: user@example.com / password123\n\n";
+        } else {
+            echo "   - User 1: user1@example.com / password123\n";
+            echo "   - User 2: user2@example.com / password123\n\n";
+        }
+
+        if ($withRole) {
+            echo "3. Role system aktif. Middleware tersedia:\n";
+            echo "   - auth: Check if user is logged in\n";
+            echo "   - guest: Redirect if logged in\n";
+            echo "   - role:admin,role:super_admin: Check user role\n\n";
+        } else {
+            echo "3. Middleware tersedia:\n";
+            echo "   - auth: Check if user is logged in\n";
+            echo "   - guest: Redirect if logged in\n\n";
+        }
+
+        echo "4. Start server:\n";
+        echo "   php mazu serve\n\n";
+
+        echo "5. Akses aplikasi:\n";
+        echo "   http://localhost:8000/login\n";
+        echo "   http://localhost:8000/register\n\n";
     }
 
-    echo "4. Start server:\n";
-    echo "   php mazu serve\n\n";
-
-    echo "5. Akses aplikasi:\n";
-    echo "   http://localhost:8000/login\n";
-    echo "   http://localhost:8000/register\n\n";
-  }
-
-  private function info(string $message): void
-  {
-    echo "   ℹ️  {$message}\n";
-  }
+    private function info(string $message): void
+    {
+        echo "   ℹ️  {$message}\n";
+    }
 }

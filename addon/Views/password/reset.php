@@ -10,6 +10,9 @@
 
     <form method="POST" action="/password/reset">
       <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+      <?php if (isset($token)): ?>
+        <input type="hidden" name="token" value="<?= $token ?>">
+      <?php endif; ?>
 
       <div class="auth-form-group">
         <label for="email" class="auth-label">Email</label>
