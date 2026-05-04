@@ -39,7 +39,8 @@
         <a
             href="/verify-otp?email=<?= urlencode($email ?? '') ?>"
             class="otp-sent-button primary"
-            data-spa>
+            data-spa
+        >
             Buka Halaman Verifikasi
         </a>
 

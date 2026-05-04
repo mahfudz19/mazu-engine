@@ -157,6 +157,8 @@ ENV;
             'is_active' => 1,
             'last_login_at' => null,
             'role' => 'super-admin',
+            'google_id' => null,
+            'avatar_url' => null,
         ],
         [
             'email' => 'admin@example.com',
@@ -166,6 +168,8 @@ ENV;
             'is_active' => 1,
             'last_login_at' => null,
             'role' => 'admin',
+            'google_id' => null,
+            'avatar_url' => null,
         ],
         [
             'email' => 'user@example.com',
@@ -175,6 +179,8 @@ ENV;
             'is_active' => 1,
             'last_login_at' => null,
             'role' => 'user',
+            'google_id' => null,
+            'avatar_url' => null,
         ]" : "
         [
             'email' => 'user1@example.com',
@@ -183,6 +189,8 @@ ENV;
             'avatar' => null,
             'is_active' => 1,
             'last_login_at' => null,
+            'google_id' => null,
+            'avatar_url' => null,
         ],
         [
             'email' => 'user2@example.com',
@@ -191,6 +199,8 @@ ENV;
             'avatar' => null,
             'is_active' => 1,
             'last_login_at' => null,
+            'google_id' => null,
+            'avatar_url' => null,
         ]";
 
         $template = <<<PHP
@@ -222,10 +232,12 @@ class UserModel extends Model
     protected array \$schema = [
         'id' => ['type' => 'id', 'primary' => true, 'auto_increment' => true],
         'email' => ['type' => 'string', 'nullable' => false, 'unique' => true],
-        'password' => ['type' => 'string', 'nullable' => false],
+        'password' => ['type' => 'string', 'nullable' => true],
         'name' => ['type' => 'string', 'nullable' => true],
         'avatar' => ['type' => 'string', 'nullable' => true],
         'is_active' => ['type' => 'boolean', 'nullable' => false, 'default' => true],
+        'google_id' => ['type' => 'string', 'nullable' => true, 'unique' => true],
+        'avatar_url' => ['type' => 'string', 'nullable' => true],
         'last_login_at' => ['type' => 'datetime', 'nullable' => true],{$roleSchema}
     ];
 
@@ -848,7 +860,7 @@ PHP;
         }
 
         $roleHandling = $withRole ? <<<'PHP'
-        // Role handling
+// Role handling
         $role = $request->input('role', 'user');
         if (!in_array($role, ['super-admin', 'admin', 'user'])) {
             $role = 'user';
@@ -1195,8 +1207,6 @@ class AuthController
         }
 
         // Activate user account
-        // Catatan: Email verification status dilacak melalui tabel email_verifications (used_at)
-        // bukan melalui kolom di tabel users
         \$this->users->updateById(\$user['id'], [
             'is_active' => 1,
         ]);
@@ -2325,7 +2335,7 @@ CSS;
         </div>
         <div class="instruction-step">
             <span class="step-number">2</span>
-            <span class="step-text">Cari email dari Mazu Framework</span>
+            <span class="step-text">Cari email dari <?= htmlspecialchars(env('MAIL_FROM_NAME', 'Mazu Framework')) ?></span>
         </div>
         <div class="instruction-step">
             <span class="step-number">3</span>
@@ -2345,12 +2355,236 @@ CSS;
         >
             Buka Halaman Verifikasi
         </a>
+
+        <button
+            type="button"
+            class="otp-sent-button secondary"
+            id="resend-from-sent"
+            disabled>
+            <span class="button-text">Kirim Ulang Email</span>
+            <span class="button-countdown">(60s)</span>
+        </button>
+    </div>
+
+    <div class="otp-sent-tips">
+        <p class="tips-title">💡 Tips:</p>
+        <ul class="tips-list">
+            <li>Periksa folder spam/junk jika email tidak muncul di inbox</li>
+            <li>Pastikan alamat email yang Anda masukkan sudah benar</li>
+            <li>Kode verifikasi berlaku selama 15 menit</li>
+        </ul>
     </div>
 
     <a href="/register" class="otp-sent-back" data-spa>
         ← Kembali ke Register
     </a>
 </div>
+
+<script>
+    (function() {
+        const resendButton = document.getElementById('resend-from-sent');
+        const countdownSpan = resendButton.querySelector('.button-countdown');
+        let cooldown = 60;
+
+        function startCooldown() {
+            const interval = setInterval(() => {
+                if (cooldown <= 0) {
+                    clearInterval(interval);
+                    resendButton.disabled = false;
+                    countdownSpan.textContent = '';
+                    return;
+                }
+
+                cooldown--;
+                countdownSpan.textContent = `(${cooldown}s)`;
+            }, 1000);
+        }
+
+        resendButton.addEventListener('click', () => {
+            if (!resendButton.disabled) {
+                window.location.href = '/resend-otp?email=' + encodeURIComponent('<?= htmlspecialchars($email ?? '') ?>');
+            }
+        });
+
+        startCooldown();
+    })();
+</script>
+
+<style>
+    .otp-sent-container {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .otp-sent-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .otp-sent-icon {
+        font-size: 64px;
+        margin-bottom: 15px;
+        animation: bounce 1s ease infinite;
+    }
+
+    @keyframes bounce {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    .otp-sent-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0 0 10px 0;
+    }
+
+    .otp-sent-description {
+        color: #666;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .otp-sent-description strong {
+        color: #333;
+        word-break: break-all;
+    }
+
+    .otp-sent-instructions {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .instruction-step {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .instruction-step:last-child {
+        border-bottom: none;
+    }
+
+    .step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    .step-text {
+        color: #333;
+        font-size: 14px;
+    }
+
+    .otp-sent-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 25px;
+    }
+
+    .otp-sent-button {
+        width: 100%;
+        padding: 16px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .otp-sent-button.primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .otp-sent-button.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .otp-sent-button.secondary {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .otp-sent-button.secondary:hover:not(:disabled) {
+        background: #667eea;
+        color: white;
+    }
+
+    .otp-sent-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .otp-sent-tips {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .tips-title {
+        font-weight: 600;
+        color: #92400e;
+        margin: 0 0 10px 0;
+        font-size: 14px;
+    }
+
+    .tips-list {
+        margin: 0;
+        padding-left: 20px;
+        color: #78350f;
+        font-size: 13px;
+        line-height: 1.8;
+    }
+
+    .tips-list li {
+        margin-bottom: 5px;
+    }
+
+    .otp-sent-back {
+        display: inline-block;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 14px;
+        transition: color 0.2s;
+    }
+
+    .otp-sent-back:hover {
+        color: #667eea;
+    }
+</style>
 PHP;
 
         file_put_contents("$authDir/otp-sent.php", $otpSentView);
@@ -2383,23 +2617,88 @@ PHP;
         </div>
     <?php endif; ?>
 
+    <?php if (isset($success)): ?>
+        <div class="otp-success" role="alert">
+            <span class="otp-success-icon">✅</span>
+            <span><?= htmlspecialchars($success) ?></span>
+        </div>
+    <?php endif; ?>
+
     <form method="POST" action="/verify-otp" id="otp-form">
         <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
         <input type="hidden" name="email" value="<?= htmlspecialchars($email ?? '') ?>">
 
         <div class="otp-inputs" role="group" aria-label="Kode verifikasi 6 digit">
-            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" required class="otp-digit" data-index="0">
-            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="1">
-            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="2">
-            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="3">
-            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="4">
-            <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" required class="otp-digit" data-index="5">
+            <input
+                type="text"
+                maxlength="1"
+                pattern="[0-9]"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                aria-label="Digit pertama"
+                required
+                class="otp-digit"
+                data-index="0">
+            <input
+                type="text"
+                maxlength="1"
+                pattern="[0-9]"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-label="Digit kedua"
+                required
+                class="otp-digit"
+                data-index="1">
+            <input
+                type="text"
+                maxlength="1"
+                pattern="[0-9]"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-label="Digit ketiga"
+                required
+                class="otp-digit"
+                data-index="2">
+            <input
+                type="text"
+                maxlength="1"
+                pattern="[0-9]"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-label="Digit keempat"
+                required
+                class="otp-digit"
+                data-index="3">
+            <input
+                type="text"
+                maxlength="1"
+                pattern="[0-9]"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-label="Digit kelima"
+                required
+                class="otp-digit"
+                data-index="4">
+            <input
+                type="text"
+                maxlength="1"
+                pattern="[0-9]"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-label="Digit keenam"
+                required
+                class="otp-digit"
+                data-index="5">
         </div>
 
         <input type="hidden" name="otp_code" id="otp-code-hidden" required>
 
         <button type="submit" class="otp-button" id="verify-button" disabled>
             <span class="button-text">Verifikasi</span>
+            <span class="button-loading" style="display: none;">
+                <span class="spinner"></span>
+                Memverifikasi...
+            </span>
         </button>
     </form>
 
@@ -2409,6 +2708,16 @@ PHP;
             <span class="timer-text" id="timer-text">Kode berlaku 15:00</span>
         </div>
 
+        <button
+            type="button"
+            class="otp-resend"
+            id="resend-button"
+            disabled
+            data-spa>
+            <span class="resend-text">Kirim Ulang OTP</span>
+            <span class="resend-countdown">(60s)</span>
+        </button>
+
         <a href="/register" class="otp-back-link" data-spa>
             ← Kembali ke Register
         </a>
@@ -2416,77 +2725,348 @@ PHP;
 </div>
 
 <script>
-(function() {
-    const inputs = document.querySelectorAll('.otp-digit');
-    const form = document.getElementById('otp-form');
-    const verifyButton = document.getElementById('verify-button');
-    const otpHidden = document.getElementById('otp-code-hidden');
-    const timerText = document.getElementById('timer-text');
+    (function() {
+        const inputs = document.querySelectorAll('.otp-digit');
+        const form = document.getElementById('otp-form');
+        const verifyButton = document.getElementById('verify-button');
+        const otpHidden = document.getElementById('otp-code-hidden');
+        const timerText = document.getElementById('timer-text');
+        const resendButton = document.getElementById('resend-button');
+        const resendCountdown = resendButton.querySelector('.resend-countdown');
 
-    let timeLeft = 900; // 15 minutes
+        let timeLeft = 900; // 15 minutes
+        let resendCooldown = 60; // 60 seconds
 
-    inputs[0].focus();
+        // Auto-focus first input
+        inputs[0].focus();
 
-    inputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            const value = e.target.value;
-            if (!/^\d*$/.test(value)) {
-                e.target.value = '';
-                return;
-            }
-            if (value.length === 1 && index < inputs.length - 1) {
-                inputs[index + 1].focus();
-            }
-            checkAllFilled();
-        });
+        // Handle input
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
 
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && input.value === '' && index > 0) {
-                inputs[index - 1].focus();
-            }
-        });
+                // Only allow numbers
+                if (!/^\d*$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
 
-        input.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const pasted = e.clipboardData.getData('text').slice(0, 6);
-            if (/^\d{6}$/.test(pasted)) {
-                inputs.forEach((inp, i) => {
-                    inp.value = pasted[i];
-                    if (i < 5) inputs[i + 1].focus();
-                });
+                // Auto-focus next
+                if (value.length === 1 && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+
+                // Check if all filled
                 checkAllFilled();
+            });
+
+            // Handle backspace
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && input.value === '' && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+
+            // Handle paste
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pasted = e.clipboardData.getData('text').slice(0, 6);
+
+                if (/^\d{6}$/.test(pasted)) {
+                    inputs.forEach((inp, i) => {
+                        inp.value = pasted[i];
+                        if (i < 5) inputs[i + 1].focus();
+                    });
+                    checkAllFilled();
+                }
+            });
+        });
+
+        function checkAllFilled() {
+            const allFilled = Array.from(inputs).every(i => i.value.length === 1);
+            if (allFilled) {
+                verifyButton.disabled = false;
+                otpHidden.value = Array.from(inputs).map(i => i.value).join('');
+            } else {
+                verifyButton.disabled = true;
+                otpHidden.value = '';
+            }
+        }
+
+        // Handle form submit
+        form.addEventListener('submit', (e) => {
+            verifyButton.disabled = true;
+            verifyButton.querySelector('.button-text').style.display = 'none';
+            verifyButton.querySelector('.button-loading').style.display = 'inline-flex';
+        });
+
+        // Timer countdown
+        function startTimer() {
+            const interval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    timerText.textContent = 'Kode telah kedaluwarsa';
+                    timerText.closest('.otp-timer').classList.add('expired');
+                    return;
+                }
+
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerText.textContent = `Kode berlaku ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                if (timeLeft < 60) {
+                    timerText.closest('.otp-timer').classList.add('urgent');
+                }
+            }, 1000);
+        }
+
+        // Resend cooldown
+        function startResendCooldown() {
+            resendButton.disabled = true;
+            let cooldown = resendCooldown;
+
+            const interval = setInterval(() => {
+                if (cooldown <= 0) {
+                    clearInterval(interval);
+                    resendButton.disabled = false;
+                    resendCountdown.textContent = '';
+                    return;
+                }
+
+                cooldown--;
+                resendCountdown.textContent = `(${cooldown}s)`;
+            }, 1000);
+        }
+
+        // Handle resend click
+        resendButton.addEventListener('click', () => {
+            if (!resendButton.disabled) {
+                window.location.href = '/resend-otp?email=' + encodeURIComponent('<?= htmlspecialchars($email ?? '') ?>');
             }
         });
-    });
 
-    function checkAllFilled() {
-        const allFilled = Array.from(inputs).every(i => i.value.length === 1);
-        if (allFilled) {
-            verifyButton.disabled = false;
-            otpHidden.value = Array.from(inputs).map(i => i.value).join('');
-        } else {
-            verifyButton.disabled = true;
-            otpHidden.value = '';
+        // Start timers
+        startTimer();
+        startResendCooldown();
+    })();
+</script>
+
+<style>
+    .otp-verification-container {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .otp-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .otp-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+
+    .otp-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0 0 10px 0;
+    }
+
+    .otp-description {
+        color: #666;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .otp-description strong {
+        color: #333;
+        word-break: break-all;
+    }
+
+    .otp-error,
+    .otp-success {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+    }
+
+    .otp-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+    }
+
+    .otp-success {
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        color: #059669;
+    }
+
+    .otp-inputs {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 30px 0;
+    }
+
+    .otp-digit {
+        width: 50px;
+        height: 60px;
+        font-size: 24px;
+        font-weight: 600;
+        text-align: center;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .otp-digit:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+
+    .otp-digit.filled {
+        border-color: #10b981;
+        background: #ecfdf5;
+    }
+
+    .otp-button {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .otp-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .otp-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .button-loading {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
         }
     }
 
-    function startTimer() {
-        const interval = setInterval(() => {
-            if (timeLeft <= 0) {
-                clearInterval(interval);
-                timerText.textContent = 'Kode telah kedaluwarsa';
-                return;
-            }
-            timeLeft--;
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            timerText.textContent = `Kode berlaku ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }, 1000);
+    .otp-footer {
+        margin-top: 30px;
+        text-align: center;
     }
 
-    startTimer();
-})();
-</script>
+    .otp-timer {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+    }
+
+    .otp-timer.urgent {
+        background: #fef2f2;
+        color: #dc2626;
+        animation: pulse 1s infinite;
+    }
+
+    .otp-timer.expired {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.6;
+        }
+    }
+
+    .otp-resend {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: none;
+        border: 2px solid #667eea;
+        color: #667eea;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 15px;
+    }
+
+    .otp-resend:hover:not(:disabled) {
+        background: #667eea;
+        color: white;
+    }
+
+    .otp-resend:disabled {
+        border-color: #cbd5e1;
+        color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+    .otp-back-link {
+        display: inline-block;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 14px;
+        transition: color 0.2s;
+    }
+
+    .otp-back-link:hover {
+        color: #667eea;
+    }
+</style>
 PHP;
 
         file_put_contents("$authDir/verify-otp.php", $verifyOtpView);

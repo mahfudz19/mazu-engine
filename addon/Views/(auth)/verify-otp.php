@@ -4,7 +4,6 @@
  * @var \App\Core\View\PageMeta $meta
  * @var string $email Email user yang akan diverifikasi
  * @var string|null $error Error message (jika ada)
- * @var string|null $success Success message (jika ada)
  */
 ?>
 

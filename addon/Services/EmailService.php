@@ -7,7 +7,7 @@ use PHPMailer\PHPMailer\Exception;
 
 /**
  * Email Service
- * 
+ *
  * Layanan pengiriman email menggunakan Gmail SMTP Relay.
  * Mendukung berbagai jenis email: OTP, notifikasi login, reset password, dll.
  */
@@ -19,7 +19,7 @@ class EmailService
 
     /**
      * Constructor - Inisialisasi PHPMailer dengan konfigurasi Gmail SMTP Relay
-     * 
+     *
      * @throws Exception Jika konfigurasi tidak lengkap
      */
     public function __construct()
@@ -47,7 +47,7 @@ class EmailService
 
     /**
      * Kirim email OTP verification
-     * 
+     *
      * @param string $to Email tujuan
      * @param string $name Nama penerima
      * @param string $otpCode Kode OTP 6 digit
@@ -66,7 +66,7 @@ class EmailService
 
     /**
      * Kirim email notifikasi login
-     * 
+     *
      * @param string $to Email tujuan
      * @param string $name Nama penerima
      * @param string $ipAddress IP address user
@@ -91,7 +91,7 @@ class EmailService
 
     /**
      * Kirim email reset password
-     * 
+     *
      * @param string $to Email tujuan
      * @param string $name Nama penerima
      * @param string $resetUrl URL reset password
@@ -110,7 +110,7 @@ class EmailService
 
     /**
      * Kirim email kustom
-     * 
+     *
      * @param string $to Email tujuan
      * @param string $name Nama penerima
      * @param string $subject Subjek email
@@ -125,7 +125,7 @@ class EmailService
 
     /**
      * Send email
-     * 
+     *
      * @param string $to Email tujuan
      * @param string $name Nama penerima
      * @param string $subject Subjek email

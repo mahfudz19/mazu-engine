@@ -90,8 +90,6 @@
   color: var(--md-sys-color-on-surface-variant);
   font-size: 0.875rem;
 }
-
-/* Google OAuth Button */
 .google-button {
   display: flex;
   align-items: center;
@@ -110,13 +108,11 @@
   transition: all 0.2s;
   box-sizing: border-box;
 }
-
 .google-button:hover {
   background-color: #f7f8f8;
   border-color: #d2e3fc;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-
 .google-icon {
   flex-shrink: 0;
 }
