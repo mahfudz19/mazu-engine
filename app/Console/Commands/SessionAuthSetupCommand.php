@@ -904,7 +904,7 @@ HTML;
             <p>Kami menerima permintaan untuk reset password akun Anda. Klik tombol di bawah untuk membuat password baru:</p>
             
             <p style="text-align: center;">
-                <a href="{$resetUrl}" class="button">Reset Password</a>
+                <a data-spa href="{$resetUrl}" class="button">Reset Password</a>
             </p>
             
             <p>Atau salin link berikut ke browser Anda:</p>
@@ -2371,7 +2371,7 @@ PHP;
   </div>
 <?php endif; ?>
 
-<form method="POST" action="/login">
+<form data-spa method="POST" action="/login">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
 
   <div class="auth-form-group">
@@ -2442,7 +2442,7 @@ PHP;
   </div>
 <?php endif; ?>
 
-<form method="POST" action="/register">
+<form data-spa method="POST" action="/register">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
 
   <div class="auth-form-group">
@@ -2646,7 +2646,7 @@ CSS;
   <div class="dashboard-card">
     <h2 class="dashboard-card-title">Selamat Datang di Dashboard</h2>
     <p class="dashboard-card-desc">Anda berhasil login dengan session authentication.</p>
-    <form method="POST" data-spa action="/logout">
+    <form data-spa method="POST" action="/logout">
       <button class="dashboard-logout">Logout</button>
     </form>
   </div>
@@ -2714,7 +2714,7 @@ CSS;
       </div>
     <?php endif; ?>
 
-    <form method="POST" action="/password/forgot">
+    <form data-spa method="POST" action="/password/forgot">
       <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
 
       <div class="auth-form-group">
@@ -2754,7 +2754,7 @@ PHP;
       </div>
     <?php endif; ?>
 
-    <form method="POST" action="/password/reset">
+    <form data-spa method="POST" action="/password/reset">
       <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
       <?php if (isset($token)): ?>
         <input type="hidden" name="token" value="<?= $token ?>">
@@ -2978,7 +2978,7 @@ CSS;
         </ul>
     </div>
 
-    <a href="/register" class="otp-sent-back" data-spa>
+    <a data-spa href="/register" class="otp-sent-back">
         ← Kembali ke Register
     </a>
 </div>
@@ -3227,7 +3227,7 @@ PHP;
         </div>
     <?php endif; ?>
 
-    <form method="POST" action="/verify-otp" id="otp-form">
+    <form data-spa method="POST" action="/verify-otp" id="otp-form">
         <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
         <input type="hidden" name="email" value="<?= htmlspecialchars($email ?? '') ?>">
 
@@ -3321,7 +3321,7 @@ PHP;
             <span class="resend-countdown">(60s)</span>
         </button>
 
-        <a href="/register" class="otp-back-link" data-spa>
+        <a data-spa href="/register" class="otp-back-link">
             ← Kembali ke Register
         </a>
     </div>
