@@ -279,7 +279,7 @@ class ViewService
     // Suntikkan skrip (urutan terbalik agar parent di-load lebih dulu)
     foreach (array_reverse(array_unique($foundScripts)) as $jsFullPath) {
       $relativePath = ltrim(str_replace($rootViewsPath, '', $jsFullPath), '/');
-      
+
       // Gunakan tracking di View agar tidak terjadi duplikasi suntikan dalam satu request
       if (View::addScript($relativePath)) {
         $url = asset('assets/' . $relativePath);

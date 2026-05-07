@@ -47,19 +47,19 @@ class AssetController
     // Pola: namafile.hash.ext -> namafile.ext
     $originalPath = $path;
     if (preg_match('/^(.+)\.[a-f0-9]{8}\.(css|js)$/', $path, $matches)) {
-        // $matches[1] = namafile (path/to/style), $matches[2] = ext (css)
-        $path = $matches[1] . '.' . $matches[2];
+      // $matches[1] = namafile (path/to/style), $matches[2] = ext (css)
+      $path = $matches[1] . '.' . $matches[2];
     }
 
     // Cek source location (addon/Views)
     $basePath = realpath(__DIR__ . '/../../../addon/Views');
-    
+
     // Coba path hasil strip hash
     $fullPath = realpath($basePath . '/' . $path);
-    
+
     // Jika tidak ketemu, coba path asli (siapa tahu memang namanya begitu)
     if (!$fullPath) {
-        $fullPath = realpath($basePath . '/' . $originalPath);
+      $fullPath = realpath($basePath . '/' . $originalPath);
     }
 
     // Pastikan file ada dan berada di dalam basePath (security check)

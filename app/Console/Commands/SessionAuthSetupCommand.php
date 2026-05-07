@@ -2372,8 +2372,6 @@ PHP;
 <?php endif; ?>
 
 <form data-spa method="POST" action="/login">
-  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-
   <div class="auth-form-group">
     <label for="email" class="auth-label">Email</label>
     <input
@@ -2443,8 +2441,6 @@ PHP;
 <?php endif; ?>
 
 <form data-spa method="POST" action="/register">
-  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-
   <div class="auth-form-group">
     <label for="name" class="auth-label">Nama Lengkap</label>
     <input
@@ -2715,8 +2711,6 @@ CSS;
     <?php endif; ?>
 
     <form data-spa method="POST" action="/password/forgot">
-      <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-
       <div class="auth-form-group">
         <label for="email" class="auth-label">Email</label>
         <input
@@ -2755,7 +2749,6 @@ PHP;
     <?php endif; ?>
 
     <form data-spa method="POST" action="/password/reset">
-      <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
       <?php if (isset($token)): ?>
         <input type="hidden" name="token" value="<?= $token ?>">
       <?php endif; ?>
@@ -3228,7 +3221,6 @@ PHP;
     <?php endif; ?>
 
     <form data-spa method="POST" action="/verify-otp" id="otp-form">
-        <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
         <input type="hidden" name="email" value="<?= htmlspecialchars($email ?? '') ?>">
 
         <div class="otp-inputs" role="group" aria-label="Kode verifikasi 6 digit">
