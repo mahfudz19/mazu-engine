@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Console\Contracts\CommandInterface;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use App\Core\Foundation\Application;
 
 class BuildCommand implements CommandInterface
 {
@@ -49,9 +50,24 @@ class BuildCommand implements CommandInterface
     // 3. Build Route Cache
     echo "  3. ROUTE CACHE\n";
     $routeStart = microtime(true);
+
+    /**
+     * Menjalankan route:cache command untuk meng-generate cache routing
+     * Menggunakan RouteCacheCommand yang sudah ada daripada require file eksternal
+     */
+    $app = new Application();
+    $app->boot();
+    $routeCacheCommand = new RouteCacheCommand();
+
+    // Capture output dari route:cache command agar tidak tampil ganda
     ob_start();
-    require_once __DIR__ . '/../../../scripts/route-cache.php';
+    $result = $routeCacheCommand->handle([]);
     ob_end_clean();
+
+    if ($result !== 0) {
+      return 1; // Stop build jika route cache gagal
+    }
+
     $routeTime = number_format(microtime(true) - $routeStart, 2) . "s";
     $this->printLineWithDots(color("✔", "green") . " Route cache generated", $routeTime);
 
