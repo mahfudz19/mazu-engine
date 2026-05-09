@@ -2519,16 +2519,16 @@ PHP;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--md-sys-color-background);
+  background-color: var(--bg-default);
   padding: 24px;
 }
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background-color: var(--md-surface-1);
-  border-radius: 28px;
+  background-color: var(--bg-paper);
+  border-radius: var(--border-radius-lg);
   padding: 40px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 .auth-title {
   font-family: "Poppins", sans-serif;
@@ -2536,14 +2536,14 @@ PHP;
   font-size: 1.75rem;
   text-align: center;
   margin-bottom: 24px;
-  color: var(--md-sys-color-on-surface);
+  color: var(--text-primary);
 }
 .auth-error {
-  background-color: var(--md-sys-color-error-container);
-  border: 1px solid var(--md-sys-color-error);
-  color: var(--md-sys-color-on-error-container);
+  background-color: var(--error-bg);
+  border: 1px solid var(--error-main);
+  color: var(--error-dark);
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--border-radius);
   margin-bottom: 20px;
   font-size: 0.9rem;
 }
@@ -2554,29 +2554,29 @@ PHP;
   display: block;
   font-weight: 500;
   font-size: 0.9rem;
-  color: var(--md-sys-color-on-surface);
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 .auth-input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
   font-size: 1rem;
   box-sizing: border-box;
   transition: border-color 0.2s;
-  background-color: var(--md-sys-color-surface);
-  color: var(--md-sys-color-on-surface);
+  background-color: var(--bg-paper);
+  color: var(--text-primary);
 }
 .auth-input:focus {
   outline: none;
-  border-color: var(--md-sys-color-primary);
+  border-color: var(--primary-main);
 }
 .auth-button {
   width: 100%;
   height: 48px;
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
+  background-color: var(--primary-main);
+  color: var(--primary-contrast);
   border: none;
   border-radius: 24px;
   font-weight: 600;
@@ -2585,25 +2585,25 @@ PHP;
   transition: all 0.2s;
 }
 .auth-button:hover {
-  background-color: var(--md-sys-color-on-primary-container);
-  box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
+  background-color: var(--primary-dark);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
 }
 .auth-links {
   margin-top: 20px;
   text-align: center;
 }
 .auth-link {
-  color: var(--md-sys-color-primary);
+  color: var(--primary-main);
   font-size: 0.9rem;
   text-decoration: none;
 }
 .auth-link:hover {
-  color: var(--md-sys-color-on-primary-container);
+  color: var(--primary-dark);
 }
 .auth-divider {
   margin: 8px 0;
   text-align: center;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 .google-button {
@@ -2655,14 +2655,14 @@ PHP;
         $dashboardStyle = <<<'CSS'
 
 .dashboard-logout {
-    color: var(--md-sys-color-error);
+    color: var(--error-main);
     text-decoration: none;
     font-weight: 500;
     font-size: 0.9rem;
     transition: color 0.2s;
 }
 .dashboard-logout:hover {
-    color: var(--md-sys-color-on-error-container);
+    color: var(--error-dark);
 }
 .dashboard-main {
     max-width: 1200px;
@@ -2670,20 +2670,20 @@ PHP;
     padding: 32px 24px;
 }
 .dashboard-card {
-    background-color: var(--md-surface-1);
-    border-radius: 28px;
+    background-color: var(--bg-paper);
+    border-radius: var(--border-radius-lg);
     padding: 32px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
 }
 .dashboard-card-title {
     font-family: "Poppins", sans-serif;
     font-weight: 600;
     font-size: 1.25rem;
-    color: var(--md-sys-color-on-surface);
+    color: var(--text-primary);
     margin: 0 0 16px 0;
 }
 .dashboard-card-desc {
-    color: var(--md-sys-color-on-surface-variant);
+    color: var(--text-secondary);
     font-size: 1rem;
     line-height: 1.6;
     margin: 0;
@@ -2807,16 +2807,16 @@ PHP;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--md-sys-color-background);
+  background-color: var(--bg-default);
   padding: 24px;
 }
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background-color: var(--md-surface-1);
-  border-radius: 28px;
+  background-color: var(--bg-paper);
+  border-radius: var(--border-radius-lg);
   padding: 40px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 .auth-title {
   font-family: "Poppins", sans-serif;
@@ -2824,23 +2824,23 @@ PHP;
   font-size: 1.75rem;
   text-align: center;
   margin-bottom: 24px;
-  color: var(--md-sys-color-on-surface);
+  color: var(--text-primary);
 }
 .auth-success {
-  background-color: var(--md-sys-color-secondary-container);
-  border: 1px solid var(--md-sys-color-secondary);
-  color: var(--md-sys-color-on-secondary-container);
+  background-color: var(--success-bg);
+  border: 1px solid var(--success-main);
+  color: var(--success-dark);
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--border-radius);
   margin-bottom: 20px;
   font-size: 0.9rem;
 }
 .auth-error {
-  background-color: var(--md-sys-color-error-container);
-  border: 1px solid var(--md-sys-color-error);
-  color: var(--md-sys-color-on-error-container);
+  background-color: var(--error-bg);
+  border: 1px solid var(--error-main);
+  color: var(--error-dark);
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--border-radius);
   margin-bottom: 20px;
   font-size: 0.9rem;
 }
@@ -2851,32 +2851,32 @@ PHP;
   display: block;
   font-weight: 500;
   font-size: 0.9rem;
-  color: var(--md-sys-color-on-surface);
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 .auth-input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
   font-size: 1rem;
   box-sizing: border-box;
   transition: border-color 0.2s;
-  background-color: var(--md-sys-color-surface);
-  color: var(--md-sys-color-on-surface);
+  background-color: var(--bg-paper);
+  color: var(--text-primary);
 }
 .auth-input:focus {
   outline: none;
-  border-color: var(--md-sys-color-primary);
+  border-color: var(--primary-main);
 }
 .auth-input::placeholder {
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--text-secondary);
 }
 .auth-button {
   width: 100%;
   height: 48px;
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
+  background-color: var(--primary-main);
+  color: var(--primary-contrast);
   border: none;
   border-radius: 24px;
   font-weight: 600;
@@ -2885,20 +2885,20 @@ PHP;
   transition: all 0.2s;
 }
 .auth-button:hover {
-  background-color: var(--md-sys-color-on-primary-container);
-  box-shadow: 0 4px 12px rgba(0, 104, 116, 0.3);
+  background-color: var(--primary-dark);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
 }
 .auth-links {
   margin-top: 20px;
   text-align: center;
 }
 .auth-link {
-  color: var(--md-sys-color-primary);
+  color: var(--primary-main);
   font-size: 0.9rem;
   text-decoration: none;
 }
 .auth-link:hover {
-  color: var(--md-sys-color-on-primary-container);
+  color: var(--primary-dark);
 }
 CSS;
 
