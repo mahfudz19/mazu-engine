@@ -30,6 +30,11 @@ class MigrateCommand implements CommandInterface
     $dbManager = $container->resolve(DatabaseManager::class);
     $migrator = new ModelSchemaMigrator($dbManager);
 
+    // Cek opsi --list
+    if (in_array('--list', $arguments, true)) {
+      return $this->listMigratedTables($dbManager);
+    }
+
     $targetModel = $arguments[0] ?? null;
 
     if ($targetModel) {
@@ -50,11 +55,40 @@ class MigrateCommand implements CommandInterface
 
     $modelsDir = __DIR__ . '/../../..' . '/addon/Models';
 
+    // Cek koneksi database terlebih dahulu
+    try {
+      $dbManager = $container->resolve(DatabaseManager::class);
+      $db = $dbManager->connection();
+      $stmt = $db->prepare('SELECT DATABASE()');
+      $stmt->execute();
+      $dbName = $stmt->fetchColumn();
+      echo color("Terhubung ke database: ", "green") . $dbName . "\n";
+    } catch (Throwable $e) {
+      echo color("ERROR: Tidak dapat terhubung ke database!\n", "red");
+      echo color("Error class: ", "red") . get_class($e) . "\n";
+      echo color("Error message: ", "red") . $e->getMessage() . "\n";
+      echo color("Error code: ", "red") . $e->getCode() . "\n";
+      return 1;
+    }
+
     try {
       $executed = $migrator->migrateAll($modelsDir, $container);
     } catch (Throwable $e) {
       echo color("Migrate dibatalkan karena error pada salah satu model.\n", "red");
-      echo color($e->getMessage() . "\n", "red");
+      echo color("Error class: ", "red") . get_class($e) . "\n";
+      echo color("Error message: ", "red") . $e->getMessage() . "\n";
+      echo color("Error code: ", "red") . $e->getCode() . "\n";
+      echo color("Stack trace:\n", "red") . $e->getTraceAsString() . "\n";
+
+      // Tampilkan previous exception jika ada
+      $previous = $e->getPrevious();
+      while ($previous) {
+        echo color("\nPrevious error:\n", "red");
+        echo color("Message: ", "red") . $previous->getMessage() . "\n";
+        echo color("Code: ", "red") . $previous->getCode() . "\n";
+        $previous = $previous->getPrevious();
+      }
+
       return 1;
     }
 
@@ -67,5 +101,47 @@ class MigrateCommand implements CommandInterface
     }
 
     return 0;
+  }
+
+  private function listMigratedTables(DatabaseManager $dbManager): int
+  {
+    try {
+      $db = $dbManager->connection();
+
+      // Dapatkan nama database menggunakan query
+      $stmt = $db->prepare('SELECT DATABASE()');
+      $stmt->execute();
+      $dbName = $stmt->fetchColumn();
+
+      // Query untuk mendapatkan semua tabel di database
+      $stmt = $db->prepare("SHOW TABLES FROM `$dbName`");
+      $stmt->execute();
+      $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+      if (empty($tables)) {
+        echo color("Tidak ada tabel di database.\n", "yellow");
+        return 0;
+      }
+
+      echo color("Tabel yang sudah di-migrate:\n", "green");
+      foreach ($tables as $table) {
+        // Cek apakah tabel memiliki foreign keys
+        $stmt = $db->prepare("SELECT COUNT(*) as fk_count FROM information_schema.KEY_COLUMN_USAGE
+                              WHERE TABLE_SCHEMA = :schema
+                              AND TABLE_NAME = :table
+                              AND REFERENCED_TABLE_NAME IS NOT NULL");
+        $stmt->execute([':schema' => $dbName, ':table' => $table]);
+        $fkCount = $stmt->fetchColumn();
+
+        $fkInfo = $fkCount > 0 ? color("($fkCount foreign keys)", "blue") : '';
+        echo "  - $table $fkInfo\n";
+      }
+
+      return 0;
+    } catch (Throwable $e) {
+      echo color("ERROR: Gagal menampilkan tabel.\n", "red");
+      echo color($e->getMessage(), "red") . "\n";
+      return 1;
+    }
   }
 }

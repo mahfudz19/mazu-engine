@@ -42,10 +42,6 @@ class View implements RenderableInterface
 
     $this->props = $props;
     $this->meta = $meta ?? new PageMeta('Untitled Page');
-
-    // Reset static assets on new request to prevent leaks
-    self::$styles = [];
-    self::$scripts = [];
   }
 
   /**
@@ -79,15 +75,6 @@ class View implements RenderableInterface
   public static function getStyles(): array
   {
     return self::$styles;
-  }
-
-  /**
-   * Mengambil semua script yang terdaftar.
-   * @return array<string>
-   */
-  public static function getScripts(): array
-  {
-    return self::$scripts;
   }
 
   /**
