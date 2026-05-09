@@ -173,19 +173,15 @@ class ViewService
 
     // Jika ini request SPA dan kita menemukan match di tengah jalan
     if ($isSpaRequest && $foundMatch) {
-      // Resolusi hash untuk styles agar cache busting bekerja di SPA
-      $styles = array_map(function ($style) {
-        // Load manifest manual karena helper asset() mengembalikan Full URL
-        static $manifest = null;
-        if ($manifest === null) {
-          $manifestPath = __DIR__ . '/../../public/build/manifest.json';
-          if (file_exists($manifestPath)) {
-            $manifest = json_decode(file_get_contents($manifestPath), true);
-          } else {
-            $manifest = [];
-          }
-        }
+      // Load manifest sekali di sini untuk dipakai oleh styles dan scripts
+      $manifestPath = __DIR__ . '/../../public/build/manifest.json';
+      $manifest = [];
+      if (file_exists($manifestPath)) {
+        $manifest = json_decode(file_get_contents($manifestPath), true) ?? [];
+      }
 
+      // Resolusi hash untuk styles agar cache busting bekerja di SPA
+      $styles = array_map(function ($style) use ($manifest) {
         $key = 'assets/' . $style;
         if (isset($manifest[$key])) {
           // Manifest value: assets/(app)/.../style.hash.css
@@ -197,13 +193,23 @@ class ViewService
         return $style;
       }, View::getStyles());
 
+      // Resolusi hash untuk scripts agar cache busting bekerja di SPA
+      $scripts = array_map(function ($script) use ($manifest) {
+        $key = 'assets/' . $script;
+        if (isset($manifest[$key])) {
+          return substr($manifest[$key], 7);
+        }
+        return $script;
+      }, View::getScripts());
+
       return json_encode([
         'html' => $html,
         'meta' => [
           'title' => $view->meta->title,
           'csrf_token' => csrf_token(),
           'layout' => $layoutHierarchy, // Mengirim ARRAY layout [child, parent, root]
-          'styles' => $styles
+          'styles' => $styles,
+          'scripts' => $scripts
         ]
       ]);
     }

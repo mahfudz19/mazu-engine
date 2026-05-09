@@ -67,17 +67,56 @@ class Database
 
       $this->connection = new PDO($dsn, $username, $password, $finalOptions);
     } catch (PDOException $e) {
-      $this->handleConnectionError($e);
+      $this->handleConnectionError($e, $driver, $host, $port, $database, $username);
     }
   }
 
-  private function handleConnectionError(PDOException $e)
+  private function handleConnectionError(\PDOException $e, $driver, $host, $port, $database, $username)
   {
-    throw new \RuntimeException(
-      "Koneksi database gagal: " . $e->getMessage(),
-      (int)$e->getCode(),
-      $e
-    );
+    $errorMsg = $e->getMessage();
+    $friendlyMessage = "Gagal terhubung ke database. ";
+    $solution = "";
+
+    // 1. Handle Error: Driver tidak ada (Sering terjadi di CLI/Worker)
+    if (str_contains($errorMsg, 'could not find driver')) {
+      $friendlyMessage .= "Driver PDO untuk '{$driver}' tidak ditemukan.";
+      $solution = "Solusi: Install ekstensi PHP yang sesuai di server (contoh: 'sudo apt install php-mysql').";
+    }
+    // 2. Handle Error: Connection Refused / Port Salah (Sering terjadi saat migrasi ke server)
+    elseif (str_contains($errorMsg, 'Connection refused') || str_contains($errorMsg, '2002')) {
+      $friendlyMessage .= "Server menolak koneksi pada host '{$host}' port '{$port}'.";
+      $solution = "Solusi: Pastikan service MySQL/MariaDB sedang menyala, dan cek nilai DB_HOST & DB_PORT di file .env.";
+    }
+    // 3. Handle Error: Access Denied / Password Salah
+    elseif (str_contains($errorMsg, 'Access denied') || str_contains($errorMsg, '1045')) {
+      $friendlyMessage .= "Akses ditolak untuk user '{$username}'.";
+      $solution = "Solusi: Periksa kembali kecocokan DB_USER dan DB_PASS di file .env Anda.";
+    }
+    // 4. Handle Error: Database tidak ditemukan
+    elseif (str_contains($errorMsg, 'Unknown database') || str_contains($errorMsg, '1049')) {
+      $friendlyMessage .= "Database bernama '{$database}' tidak ditemukan.";
+      $solution = "Solusi: Pastikan nama database di DB_NAME sudah benar, atau buat database tersebut di MySQL terlebih dahulu.";
+    }
+    // Default Fallback
+    else {
+      $friendlyMessage .= "Kesalahan tidak dikenal.";
+      $solution = "Pesan teknis: " . $errorMsg;
+    }
+
+    // Gabungkan pesan menjadi satu string yang rapi
+    $finalMessage = "\n[DATABASE ERROR] {$friendlyMessage}\n👉 {$solution}\n";
+
+    // Jika sistem memiliki fungsi logger (misal bawaan Mazu), catat error-nya tanpa mengekspos password
+    if (function_exists('logger')) {
+      logger()->error("Database Connection Failed", [
+        'host' => $host,
+        'database' => $database,
+        'user' => $username,
+        'error' => $errorMsg
+      ]);
+    }
+
+    throw new \RuntimeException($finalMessage, (int)$e->getCode(), $e);
   }
 
   public function prepare($sql)

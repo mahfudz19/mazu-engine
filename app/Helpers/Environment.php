@@ -151,7 +151,19 @@ function getBaseUrl($path = '/')
   }
 
   // Fallback: Jika baseUrl kosong, kembalikan '/'
-  return empty($baseUrl) ? '/' : $baseUrl;
+  return $baseUrl;
+}
+
+function removeBaseUrl($requestUri)
+{
+  $baseUrl = getBaseUrl();
+  if ($baseUrl !== '/' && str_starts_with($requestUri, $baseUrl)) {
+    $requestUri = substr($requestUri, strlen($baseUrl));
+    if (empty($requestUri)) {
+      $requestUri = '/';
+    }
+  }
+  return $requestUri;
 }
 
 if (!isset($GLOBALS['dump_config'])) {

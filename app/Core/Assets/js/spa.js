@@ -379,14 +379,26 @@ async function loadContent(url, options = {}) {
         return;
       }
 
-      // Update Cache dengan data baru
-      spaCache.set(url, {
-        data: data,
-        timestamp: Date.now(),
-      });
+      // [PRE-LOAD ASSETS]
+      // Tunggu semua style dan script baru selesai di-download sebelum ganti konten
+      if (data.meta) {
+        if (data.meta.styles) {
+          await loadStyles(data.meta.styles);
+        }
+        if (data.meta.scripts) {
+          await loadScripts(data.meta.scripts);
+        }
+      }
 
-      // Render data baru ke layar (User akan melihat update jika konten berubah)
       renderSpaResponse(data, url, options);
+
+      // Simpan ke cache (hanya untuk GET)
+      if (method === "GET") {
+        spaCache.set(url, {
+          timestamp: Date.now(),
+          data: data,
+        });
+      }
     } else {
       // Fallback jika bukan JSON (Full page reload)
       window.location.href = url;
@@ -474,10 +486,7 @@ function renderSpaResponse(data, url, options = {}) {
     }
   }
 
-  // Inject New Styles
-  if (data.meta && data.meta.styles) {
-    handleNewStyles(data.meta.styles);
-  }
+  // Styles and Scripts are now preloaded in loadContent() to prevent FOUC
 
   // Logika Smart Layout Replacement
   let containerToUpdate = null;
@@ -575,37 +584,79 @@ function saveCurrentScrollPosition() {
   );
 }
 
-// Helper untuk menangani CSS baru
-function handleNewStyles(styles) {
-  if (!Array.isArray(styles)) return;
+// Helper untuk menangani CSS baru dengan Promise (Async)
+function loadStyles(styles) {
+  if (!Array.isArray(styles)) return Promise.resolve();
 
   const head = document.head;
   const existingLinks = Array.from(
     head.querySelectorAll('link[rel="stylesheet"]'),
   ).map((link) => link.getAttribute("href"));
 
-  styles.forEach((stylePath) => {
-    // Encode path agar aman di URL
-    const encodedPath = encodeURIComponent(stylePath);
+  // Gunakan base_url dari konfigurasi server (jika ada), fallback ke root '/'
+  let baseUrl = window.mazuConfig?.base_url || "/";
+  if (!baseUrl.endsWith("/")) baseUrl += "/";
 
+  const promises = styles.map((stylePath) => {
     // Construct URL pattern yang kita cari
     const searchPattern = `build/assets/${stylePath}`;
 
-    // Cek keberadaan
     const exists = existingLinks.some((href) => href.includes(searchPattern));
 
-    if (!exists) {
+    if (exists) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-
-      // Gunakan base_url dari konfigurasi server (jika ada), fallback ke root '/'
-      let baseUrl = window.mazuConfig?.base_url || "/";
-      if (!baseUrl.endsWith("/")) baseUrl += "/";
-
       link.href = `${baseUrl}build/assets/${stylePath}`;
+
+      link.onload = () => resolve();
+      link.onerror = () => {
+        console.warn(`Failed to load style: ${stylePath}`);
+        resolve();
+      };
+
       head.appendChild(link);
-    }
+    });
   });
+
+  return Promise.all(promises);
+}
+
+// Helper untuk menangani Script baru dengan Promise (Async)
+function loadScripts(scripts) {
+  if (!Array.isArray(scripts)) return Promise.resolve();
+
+  const head = document.head;
+  const existingScripts = Array.from(
+    document.querySelectorAll("script[src]"),
+  ).map((s) => s.getAttribute("src"));
+
+  let baseUrl = window.mazuConfig?.base_url || "/";
+  if (!baseUrl.endsWith("/")) baseUrl += "/";
+
+  const promises = scripts.map((scriptPath) => {
+    const searchPattern = `build/assets/${scriptPath}`;
+    const exists = existingScripts.some((src) => src.includes(searchPattern));
+
+    if (exists) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `${baseUrl}build/assets/${scriptPath}`;
+      script.async = false;
+
+      script.onload = () => resolve();
+      script.onerror = () => {
+        console.warn(`Failed to load script: ${scriptPath}`);
+        resolve();
+      };
+
+      head.appendChild(script);
+    });
+  });
+
+  return Promise.all(promises);
 }
 
 // Expose global API
@@ -877,78 +928,3 @@ class SpaPrefetcher {
 }
 
 window.SpaPrefetcher = SpaPrefetcher;
-
-// Function to normalize URLs with base_url
-function normalizeUrlWithBaseUrl(url, baseUrl) {
-    // Skip jika URL sudah lengkap (http/https) atau dimulai dengan #
-    if (!url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('#')) {
-        return url;
-    }
-    
-    // Skip jika URL sudah menggunakan base_url
-    if (url.startsWith(baseUrl)) {
-        return url;
-    }
-    
-    // Tambahkan base_url untuk URL yang dimulai dengan /
-    if (url.startsWith('/')) {
-        return baseUrl + url;
-    }
-    
-    return url;
-}
-
-// Tambahkan debugging
-function applyBaseUrlNormalization() {
-    const baseUrl = window.mazuConfig?.base_url || '';
-    
-    let processedLinks = 0;
-    let processedForms = 0;
-    
-    // Process all <a> tags with data-spa
-    document.querySelectorAll('a[data-spa]').forEach(link => {
-        const href = link.getAttribute('href');
-        if (href) {
-            const newHref = normalizeUrlWithBaseUrl(href, baseUrl);
-            if (newHref !== href) {
-                link.setAttribute('href', newHref);
-                processedLinks++;
-            }
-        }
-    });
-    
-    // Process all <form> tags with data-spa
-    document.querySelectorAll('form[data-spa]').forEach(form => {
-        const action = form.getAttribute('action');
-        if (action) {
-            const newAction = normalizeUrlWithBaseUrl(action, baseUrl);
-            if (newAction !== action) {
-                form.setAttribute('action', newAction);
-                processedForms++;
-            }
-        }
-    });
-}
-
-// MutationObserver untuk elemen baru
-const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.type === 'childList') {
-            // Delay sedikit untuk memastikan elemen ter-render sempurna
-            setTimeout(applyBaseUrlNormalization, 100);
-        }
-    });
-});
-
-// Mulai observe seluruh body
-observer.observe(document.body, {
-    childList: true,
-    subtree: true
-});
-
-// Event listener yang sudah ada
-document.addEventListener('DOMContentLoaded', applyBaseUrlNormalization);
-window.addEventListener('spa:navigated', applyBaseUrlNormalization);
-
-// Fallback: cek setiap beberapa detik untuk elemen yang mungkin terlewat
-setInterval(applyBaseUrlNormalization, 2000);

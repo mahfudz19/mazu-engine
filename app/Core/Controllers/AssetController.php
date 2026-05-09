@@ -63,7 +63,7 @@ class AssetController
     }
 
     // Pastikan file ada dan berada di dalam basePath (security check)
-    if ($fullPath && file_exists($fullPath) && str_starts_with($fullPath, $basePath)) {
+    if ($fullPath && file_exists($fullPath) && str_starts_with($fullPath, $basePath) && !is_dir($fullPath)) {
       $mime = $this->getMimeType($fullPath);
       header("Content-Type: $mime");
       // Disable cache for dev
